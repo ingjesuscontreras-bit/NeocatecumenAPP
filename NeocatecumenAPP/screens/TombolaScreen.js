@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,26 +8,49 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { hermanosDB } from '../data/hermanos';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { useComunidad } from '../context/ComunidadContext';
 import { construirUnidades, generarSorteo } from '../utils/sorteoAlgorithm';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function TombolaScreen() {
+  const { comunidadId } = useComunidad();
+  const [hermanos, setHermanos] = useState([]);
+  const [cargandoHermanos, setCargandoHermanos] = useState(true);
+
   const [numGrupos, setNumGrupos] = useState('3');
   const [esManual, setEsManual] = useState(false);
   const [cabezasSeleccionadas, setCabezasSeleccionadas] = useState([]);
   const [grupos, setGrupos] = useState([]);
 
-  const unidadesDisponibles = useMemo(() => construirUnidades(hermanosDB), []);
+  const cargarHermanos = useCallback(async () => {
+    if (!comunidadId) return;
+    setCargandoHermanos(true);
+    try {
+      const snap = await getDocs(collection(db, 'comunidades', comunidadId, 'hermanos'));
+      setHermanos(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (error) {
+      console.log('Error cargando hermanos:', error);
+    } finally {
+      setCargandoHermanos(false);
+    }
+  }, [comunidadId]);
+
+  useEffect(() => {
+    cargarHermanos();
+  }, [cargarHermanos]);
+
+  const unidadesDisponibles = useMemo(() => construirUnidades(hermanos), [hermanos]);
   const numGruposInt = parseInt(numGrupos, 10) || 0;
 
   const toggleCabezaUnidad = (unidad) => {
     const idRepresentativo = unidad.miembros[0].id;
     const idsDeLaUnidad = unidad.miembros.map((m) => m.id);
-
     const yaSeleccionada = idsDeLaUnidad.some((id) => cabezasSeleccionadas.includes(id));
 
     if (yaSeleccionada) {
@@ -48,8 +71,12 @@ export default function TombolaScreen() {
     unidad.miembros.some((m) => cabezasSeleccionadas.includes(m.id));
 
   const handleGenerarSorteo = () => {
+    if (hermanos.length === 0) {
+      Alert.alert('Sin hermanos', 'Tu responsable todavía no ha subido la lista de hermanos.');
+      return;
+    }
     try {
-      const resultado = generarSorteo(hermanosDB, numGruposInt, esManual, cabezasSeleccionadas);
+      const resultado = generarSorteo(hermanos, numGruposInt, esManual, cabezasSeleccionadas);
       setGrupos(resultado);
     } catch (error) {
       Alert.alert('No se pudo generar el sorteo', error.message);
@@ -57,10 +84,27 @@ export default function TombolaScreen() {
     }
   };
 
+  if (cargandoHermanos) {
+    return (
+      <View style={styles.cargandoContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <Text style={styles.titulo}>🎟️ Tómbola de Grupos</Text>
       <Text style={styles.subtitulo}>Los matrimonios siempre permanecen juntos en el mismo grupo.</Text>
+
+      {hermanos.length === 0 && (
+        <View style={styles.cardAviso}>
+          <Ionicons name="alert-circle-outline" size={22} color={COLORS.danger} />
+          <Text style={styles.avisoTexto}>
+            Tu responsable todavía no ha subido la lista de hermanos de la comunidad.
+          </Text>
+        </View>
+      )}
 
       <View style={styles.card}>
         <Text style={styles.label}>Cantidad de grupos a formar</Text>
@@ -159,9 +203,21 @@ export default function TombolaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  cargandoContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
   scrollContent: { padding: SPACING.lg - 4, paddingBottom: SPACING.xl + 28 },
   titulo: { fontSize: FONT.titulo, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.xs },
   subtitulo: { fontSize: FONT.subtitulo - 2, color: COLORS.textMuted, marginBottom: SPACING.lg - 4 },
+  cardAviso: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FDEDED',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#F3C9C9',
+  },
+  avisoTexto: { fontSize: FONT.texto - 1, color: COLORS.danger, marginLeft: SPACING.sm, flex: 1 },
   card: {
     backgroundColor: COLORS.card,
     borderRadius: RADIUS.md,
