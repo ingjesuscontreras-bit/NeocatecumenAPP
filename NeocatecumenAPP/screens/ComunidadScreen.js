@@ -1,38 +1,58 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, ScrollView, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, TextInput, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { hermanosDB } from '../data/hermanos';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { useComunidad } from '../context/ComunidadContext';
 import { construirUnidades } from '../utils/sorteoAlgorithm';
-
-const COLORS = {
-  primary: '#4C3AAE',
-  background: '#F5F4FB',
-  card: '#FFFFFF',
-  border: '#DAD6F2',
-  text: '#221B4D',
-  textMuted: '#6E6693',
-};
+import { COLORS } from '../theme/colors';
 
 export default function ComunidadScreen() {
+  const { comunidadId } = useComunidad();
   const [busqueda, setBusqueda] = useState('');
+  const [hermanos, setHermanos] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
-  // Reusamos la misma lógica de "unidades" del sorteo: matrimonios
+  const cargarHermanos = useCallback(async () => {
+    if (!comunidadId) return;
+    setCargando(true);
+    try {
+      const snap = await getDocs(collection(db, 'comunidades', comunidadId, 'hermanos'));
+      setHermanos(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (error) {
+      console.log('Error cargando hermanos:', error);
+    } finally {
+      setCargando(false);
+    }
+  }, [comunidadId]);
+
+  useEffect(() => {
+    cargarHermanos();
+  }, [cargarHermanos]);
+
+  // Reusamos la misma lógica de "unidades" de la Tómbola: matrimonios
   // agrupados en una sola tarjeta, personas individuales en la suya.
-  const unidades = useMemo(() => construirUnidades(hermanosDB), []);
+  const unidades = useMemo(() => construirUnidades(hermanos), [hermanos]);
 
   const unidadesFiltradas = useMemo(() => {
     if (!busqueda.trim()) return unidades;
     const textoBusqueda = busqueda.toLowerCase();
-    return unidades.filter((u) =>
-      u.etiqueta.toLowerCase().includes(textoBusqueda)
-    );
+    return unidades.filter((u) => u.etiqueta.toLowerCase().includes(textoBusqueda));
   }, [busqueda, unidades]);
+
+  if (cargando) {
+    return (
+      <View style={styles.cargandoContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <Text style={styles.titulo}>🤝 Comunidad</Text>
       <Text style={styles.subtitulo}>
-        {unidades.length} unidades familiares · {hermanosDB.length} hermanos
+        {unidades.length} unidades familiares · {hermanos.length} hermanos
       </Text>
 
       <View style={styles.buscador}>
@@ -45,6 +65,12 @@ export default function ComunidadScreen() {
           onChangeText={setBusqueda}
         />
       </View>
+
+      {hermanos.length === 0 && (
+        <Text style={styles.sinResultados}>
+          Tu responsable todavía no ha subido la lista de hermanos.
+        </Text>
+      )}
 
       {unidadesFiltradas.map((unidad) => (
         <View key={unidad.id} style={styles.card}>
@@ -60,14 +86,15 @@ export default function ComunidadScreen() {
           {unidad.miembros.map((persona) => (
             <View key={persona.id} style={styles.filaMiembro}>
               <Text style={styles.filaMiembroNombre}>{persona.nombre}</Text>
-              <Text style={styles.filaMiembroDato}>{persona.rol}</Text>
-              <Text style={styles.filaMiembroDato}>📞 {persona.telefono}</Text>
+              {persona.telefono ? (
+                <Text style={styles.filaMiembroDato}>📞 {persona.telefono}</Text>
+              ) : null}
             </View>
           ))}
         </View>
       ))}
 
-      {unidadesFiltradas.length === 0 && (
+      {hermanos.length > 0 && unidadesFiltradas.length === 0 && (
         <Text style={styles.sinResultados}>No se encontraron hermanos con ese nombre.</Text>
       )}
     </ScrollView>
@@ -76,6 +103,7 @@ export default function ComunidadScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  cargandoContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
   scrollContent: { padding: 20, paddingBottom: 60 },
   titulo: { fontSize: 28, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
   subtitulo: { fontSize: 15, color: COLORS.textMuted, marginBottom: 16 },

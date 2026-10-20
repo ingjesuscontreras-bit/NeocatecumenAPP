@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useComunidad } from '../context/ComunidadContext';
+import { COLORS } from '../theme/colors';
 
 export default function InicioScreen() {
   const { salir, comunidad, modo } = useComunidad();
@@ -28,15 +29,34 @@ export default function InicioScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F4FB', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  titulo: { fontSize: 26, fontWeight: '800', color: '#221B4D', marginBottom: 10 },
-  texto: { fontSize: 16, color: '#6E6693', marginBottom: 4 },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  titulo: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 10,
+  },
+  texto: {
+    fontSize: 16,
+    color: COLORS.textMuted,
+    marginBottom: 4,
+  },
   botonSalir: {
     marginTop: 30,
-    backgroundColor: '#D64545',
+    backgroundColor: COLORS.danger,
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 24,
   },
-  botonSalirTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  botonSalirTexto: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

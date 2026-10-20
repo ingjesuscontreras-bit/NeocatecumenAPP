@@ -3,15 +3,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { liturgiaHoy } from '../data/liturgia';
 
-const COLORS = {
-  primary: '#4C3AAE',
-  background: '#F5F4FB',
-  card: '#FFFFFF',
-  border: '#DAD6F2',
-  text: '#221B4D',
-  textMuted: '#6E6693',
-  accent: '#FF7A45',
-};
+import { COLORS } from '../theme/colors';
 
 export default function LiturgiaScreen() {
   return (

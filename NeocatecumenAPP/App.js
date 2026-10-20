@@ -13,6 +13,7 @@ import InicioScreen from './screens/InicioScreen';
 import ComunidadScreen from './screens/ComunidadScreen';
 import TombolaScreen from './screens/TombolaScreen';
 import LiturgiaScreen from './screens/LiturgiaScreen';
+import AdminScreen from './screens/AdminScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,9 +22,10 @@ const ICONOS = {
   Comunidad: { activo: 'people', inactivo: 'people-outline' },
   Tómbola: { activo: 'gift', inactivo: 'gift-outline' },
   Liturgia: { activo: 'book', inactivo: 'book-outline' },
+  Admin: { activo: 'settings', inactivo: 'settings-outline' },
 };
 
-function AppTabs() {
+function AppTabs({ esAdmin }) {
   return (
     <Tab.Navigator
       initialRouteName="Inicio"
@@ -43,13 +45,14 @@ function AppTabs() {
       <Tab.Screen name="Comunidad" component={ComunidadScreen} />
       <Tab.Screen name="Tómbola" component={TombolaScreen} />
       <Tab.Screen name="Liturgia" component={LiturgiaScreen} />
+      {esAdmin && <Tab.Screen name="Admin" component={AdminScreen} />}
     </Tab.Navigator>
   );
 }
 
 function Portero() {
   const { modo, cargando } = useComunidad();
-  const [pantalla, setPantalla] = useState('bienvenida'); // 'bienvenida' | 'unirse' | 'adminAcceso'
+  const [pantalla, setPantalla] = useState('bienvenida');
 
   if (cargando) {
     return (
@@ -59,12 +62,8 @@ function Portero() {
     );
   }
 
-  // Ya hay sesión activa (admin o miembro) → mostrar la app normal
-  // NOTA: aquí falta diferenciar Admin (verá su panel) de Miembro (verá las tabs) —
-  // lo resolvemos en el próximo paso cuando construyamos el AdminScreen real.
-  if (modo === 'admin' || modo === 'miembro') {
-    return <AppTabs />;
-  }
+  if (modo === 'admin') return <AppTabs esAdmin />;
+  if (modo === 'miembro') return <AppTabs esAdmin={false} />;
 
   if (pantalla === 'unirse') {
     return <UnirseScreen onVolver={() => setPantalla('bienvenida')} />;

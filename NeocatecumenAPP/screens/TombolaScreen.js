@@ -13,16 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { hermanosDB } from '../data/hermanos';
 import { construirUnidades, generarSorteo } from '../utils/sorteoAlgorithm';
 
-const COLORS = {
-  primary: '#4C3AAE',
-  primaryDark: '#332876',
-  accent: '#FF7A45',
-  background: '#F5F4FB',
-  card: '#FFFFFF',
-  border: '#DAD6F2',
-  text: '#221B4D',
-  textMuted: '#6E6693',
-};
+  import { COLORS } from '../theme/colors';
 
 export default function TombolaScreen() {
   const [numGrupos, setNumGrupos] = useState('3');

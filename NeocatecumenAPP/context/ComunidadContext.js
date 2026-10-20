@@ -15,6 +15,7 @@ import {
   signInWithEmailAndPassword,
   signInAnonymously,
   signOut,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import {
   doc,
@@ -106,6 +107,11 @@ export function ComunidadProvider({ children }) {
   const loginAdmin = (email, password) => signInWithEmailAndPassword(auth, email, password);
 
   /**
+   * Envía un correo de restablecimiento de contraseña al Responsable.
+   */
+  const recuperarContrasena = (email) => sendPasswordResetEmail(auth, email);
+
+  /**
    * Un hermano se une a una comunidad usando el código de acceso.
    */
   const unirseConCodigo = async (codigoIngresado, nombreMostrado) => {
@@ -148,6 +154,7 @@ export function ComunidadProvider({ children }) {
         cargando,
         crearComunidad,
         loginAdmin,
+        recuperarContrasena,
         unirseConCodigo,
         salir,
       }}
