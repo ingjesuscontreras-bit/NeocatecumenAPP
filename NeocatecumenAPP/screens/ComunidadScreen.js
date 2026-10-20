@@ -6,6 +6,7 @@ import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
 import { construirUnidades } from '../utils/sorteoAlgorithm';
 import { COLORS } from '../theme/colors';
+import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function ComunidadScreen() {
   const { comunidadId } = useComunidad();
@@ -30,8 +31,6 @@ export default function ComunidadScreen() {
     cargarHermanos();
   }, [cargarHermanos]);
 
-  // Reusamos la misma lógica de "unidades" de la Tómbola: matrimonios
-  // agrupados en una sola tarjeta, personas individuales en la suya.
   const unidades = useMemo(() => construirUnidades(hermanos), [hermanos]);
 
   const unidadesFiltradas = useMemo(() => {
@@ -104,40 +103,41 @@ export default function ComunidadScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   cargandoContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-  scrollContent: { padding: 20, paddingBottom: 60 },
-  titulo: { fontSize: 28, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
-  subtitulo: { fontSize: 15, color: COLORS.textMuted, marginBottom: 16 },
+  scrollContent: { padding: SPACING.lg - 4, paddingBottom: SPACING.xl + 28 },
+  titulo: { fontSize: FONT.titulo, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.xs },
+  subtitulo: { fontSize: FONT.subtitulo - 2, color: COLORS.textMuted, marginBottom: SPACING.md + 2 },
   buscador: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 14,
+    borderRadius: RADIUS.sm + 4,
     borderWidth: 1.5,
     borderColor: COLORS.border,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    marginBottom: 18,
+    paddingHorizontal: SPACING.md - 2,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.lg - 2,
   },
-  buscadorInput: { flex: 1, fontSize: 16, color: COLORS.text, marginLeft: 8, paddingVertical: 10 },
+  buscadorInput: { flex: 1, fontSize: FONT.texto, color: COLORS.text, marginLeft: SPACING.sm, paddingVertical: SPACING.sm + 2 },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md - 2,
     borderWidth: 1,
     borderColor: COLORS.border,
+    ...SOMBRA_TARJETA,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: SPACING.sm + 2,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    paddingBottom: 8,
+    paddingBottom: SPACING.sm,
   },
-  cardTitulo: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginLeft: 8 },
-  filaMiembro: { marginBottom: 6 },
-  filaMiembroNombre: { fontSize: 16, fontWeight: '600', color: COLORS.text },
-  filaMiembroDato: { fontSize: 14, color: COLORS.textMuted },
-  sinResultados: { fontSize: 16, color: COLORS.textMuted, textAlign: 'center', marginTop: 30 },
+  cardTitulo: { fontSize: FONT.subtitulo, fontWeight: '700', color: COLORS.text, marginLeft: SPACING.sm },
+  filaMiembro: { marginBottom: SPACING.xs + 2 },
+  filaMiembroNombre: { fontSize: FONT.texto, fontWeight: '600', color: COLORS.text },
+  filaMiembroDato: { fontSize: FONT.pequeno, color: COLORS.textMuted },
+  sinResultados: { fontSize: FONT.texto, color: COLORS.textMuted, textAlign: 'center', marginTop: SPACING.xl - 2 },
 });

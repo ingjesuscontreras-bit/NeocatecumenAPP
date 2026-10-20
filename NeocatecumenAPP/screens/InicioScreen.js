@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useComunidad } from '../context/ComunidadContext';
 import { COLORS } from '../theme/colors';
+import { SPACING, RADIUS, FONT } from '../theme/layout';
 
 export default function InicioScreen() {
   const { salir, comunidad, modo } = useComunidad();
@@ -16,9 +17,7 @@ export default function InicioScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>🏠 Inicio</Text>
-      <Text style={styles.texto}>
-        Comunidad: {comunidad?.nombre || 'Sin nombre'}
-      </Text>
+      <Text style={styles.texto}>Comunidad: {comunidad?.nombre || 'Sin nombre'}</Text>
       <Text style={styles.texto}>Modo: {modo}</Text>
 
       <TouchableOpacity style={styles.botonSalir} onPress={handleCerrarSesion}>
@@ -34,29 +33,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: SPACING.lg,
   },
-  titulo: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 10,
-  },
-  texto: {
-    fontSize: 16,
-    color: COLORS.textMuted,
-    marginBottom: 4,
-  },
+  titulo: { fontSize: FONT.titulo - 2, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.sm + 2 },
+  texto: { fontSize: FONT.texto, color: COLORS.textMuted, marginBottom: SPACING.xs },
   botonSalir: {
-    marginTop: 30,
+    marginTop: SPACING.xl - 2,
     backgroundColor: COLORS.danger,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    borderRadius: RADIUS.sm + 4,
+    paddingVertical: SPACING.md - 2,
+    paddingHorizontal: SPACING.lg,
   },
-  botonSalirTexto: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  botonSalirTexto: { color: '#FFFFFF', fontSize: FONT.pequeno + 1, fontWeight: '700' },
 });

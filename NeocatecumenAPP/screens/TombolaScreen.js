@@ -12,8 +12,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { hermanosDB } from '../data/hermanos';
 import { construirUnidades, generarSorteo } from '../utils/sorteoAlgorithm';
-
-  import { COLORS } from '../theme/colors';
+import { COLORS } from '../theme/colors';
+import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function TombolaScreen() {
   const [numGrupos, setNumGrupos] = useState('3');
@@ -28,14 +28,10 @@ export default function TombolaScreen() {
     const idRepresentativo = unidad.miembros[0].id;
     const idsDeLaUnidad = unidad.miembros.map((m) => m.id);
 
-    const yaSeleccionada = idsDeLaUnidad.some((id) =>
-      cabezasSeleccionadas.includes(id)
-    );
+    const yaSeleccionada = idsDeLaUnidad.some((id) => cabezasSeleccionadas.includes(id));
 
     if (yaSeleccionada) {
-      setCabezasSeleccionadas((prev) =>
-        prev.filter((id) => !idsDeLaUnidad.includes(id))
-      );
+      setCabezasSeleccionadas((prev) => prev.filter((id) => !idsDeLaUnidad.includes(id)));
     } else {
       if (cabezasSeleccionadas.length >= numGruposInt) {
         Alert.alert(
@@ -53,12 +49,7 @@ export default function TombolaScreen() {
 
   const handleGenerarSorteo = () => {
     try {
-      const resultado = generarSorteo(
-        hermanosDB,
-        numGruposInt,
-        esManual,
-        cabezasSeleccionadas
-      );
+      const resultado = generarSorteo(hermanosDB, numGruposInt, esManual, cabezasSeleccionadas);
       setGrupos(resultado);
     } catch (error) {
       Alert.alert('No se pudo generar el sorteo', error.message);
@@ -69,9 +60,7 @@ export default function TombolaScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <Text style={styles.titulo}>🎟️ Tómbola de Grupos</Text>
-      <Text style={styles.subtitulo}>
-        Los matrimonios siempre permanecen juntos en el mismo grupo.
-      </Text>
+      <Text style={styles.subtitulo}>Los matrimonios siempre permanecen juntos en el mismo grupo.</Text>
 
       <View style={styles.card}>
         <Text style={styles.label}>Cantidad de grupos a formar</Text>
@@ -82,9 +71,7 @@ export default function TombolaScreen() {
           onChangeText={(texto) => {
             const limpio = texto.replace(/[^0-9]/g, '');
             setNumGrupos(limpio);
-            setCabezasSeleccionadas((prev) =>
-              prev.slice(0, parseInt(limpio, 10) || 0)
-            );
+            setCabezasSeleccionadas((prev) => prev.slice(0, parseInt(limpio, 10) || 0));
           }}
           placeholder="Ej: 4"
           placeholderTextColor={COLORS.textMuted}
@@ -95,9 +82,7 @@ export default function TombolaScreen() {
         <View style={styles.filaSwitch}>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Elegir cabezas de grupo</Text>
-            <Text style={styles.textoAyuda}>
-              {esManual ? 'Modo: Manual' : 'Modo: Aleatorio'}
-            </Text>
+            <Text style={styles.textoAyuda}>{esManual ? 'Modo: Manual' : 'Modo: Aleatorio'}</Text>
           </View>
           <Switch
             value={esManual}
@@ -113,9 +98,7 @@ export default function TombolaScreen() {
 
       {esManual && (
         <View style={styles.card}>
-          <Text style={styles.label}>
-            Selecciona {numGruposInt || '...'} cabeza(s) de grupo
-          </Text>
+          <Text style={styles.label}>Selecciona {numGruposInt || '...'} cabeza(s) de grupo</Text>
           <Text style={styles.textoAyuda}>
             ({cabezasSeleccionadas.length}/{numGruposInt || 0} seleccionadas)
           </Text>
@@ -162,7 +145,7 @@ export default function TombolaScreen() {
               </View>
               {grupo.miembros.map((persona) => (
                 <View key={persona.id} style={styles.miembroFila}>
-                  <Ionicons name="person" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
+                  <Ionicons name="person" size={18} color={COLORS.primary} style={{ marginRight: SPACING.sm }} />
                   <Text style={styles.miembroTexto}>{persona.nombre}</Text>
                 </View>
               ))}
@@ -176,26 +159,27 @@ export default function TombolaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { padding: 20, paddingBottom: 60 },
-  titulo: { fontSize: 28, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
-  subtitulo: { fontSize: 16, color: COLORS.textMuted, marginBottom: 20 },
+  scrollContent: { padding: SPACING.lg - 4, paddingBottom: SPACING.xl + 28 },
+  titulo: { fontSize: FONT.titulo, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.xs },
+  subtitulo: { fontSize: FONT.subtitulo - 2, color: COLORS.textMuted, marginBottom: SPACING.lg - 4 },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg - 6,
+    marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    ...SOMBRA_TARJETA,
   },
-  label: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 10 },
-  textoAyuda: { fontSize: 15, color: COLORS.textMuted },
+  label: { fontSize: FONT.subtitulo, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm + 2 },
+  textoAyuda: { fontSize: FONT.texto - 1, color: COLORS.textMuted },
   input: {
     borderWidth: 2,
     borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    fontSize: 22,
+    borderRadius: RADIUS.sm + 2,
+    paddingVertical: SPACING.md - 2,
+    paddingHorizontal: SPACING.md,
+    fontSize: FONT.titulo - 6,
     fontWeight: '600',
     color: COLORS.text,
     backgroundColor: COLORS.background,
@@ -204,41 +188,45 @@ const styles = StyleSheet.create({
   filaPersona: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+    paddingVertical: SPACING.md - 2,
+    paddingHorizontal: SPACING.sm + 4,
+    borderRadius: RADIUS.sm + 2,
+    marginBottom: SPACING.sm,
     borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   filaPersonaSeleccionada: { borderColor: COLORS.primary, backgroundColor: '#EFEBFC' },
-  textoPersona: { fontSize: 17, color: COLORS.text, marginLeft: 10, flex: 1 },
-  badgeMatrimonio: { backgroundColor: '#FFE3D3', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeMatrimonioTexto: { fontSize: 12, fontWeight: '700', color: '#B5501C' },
+  textoPersona: { fontSize: FONT.subtitulo - 1, color: COLORS.text, marginLeft: SPACING.sm + 2, flex: 1 },
+  badgeMatrimonio: { backgroundColor: '#FFE3D3', borderRadius: RADIUS.lg, paddingHorizontal: SPACING.sm + 2, paddingVertical: SPACING.xs },
+  badgeMatrimonioTexto: { fontSize: FONT.pequeno - 2, fontWeight: '700', color: '#B5501C' },
   botonPrincipal: {
     flexDirection: 'row',
     backgroundColor: COLORS.accent,
-    borderRadius: 18,
-    paddingVertical: 20,
+    borderRadius: RADIUS.lg - 2,
+    paddingVertical: SPACING.lg - 4,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: SPACING.xs + 4,
+    marginBottom: SPACING.lg,
+    ...SOMBRA_TARJETA,
+    shadowColor: COLORS.accent,
+    shadowOpacity: 0.35,
   },
-  botonPrincipalTexto: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', marginLeft: 10 },
-  resultados: { marginTop: 4 },
-  tituloResultados: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: 14 },
+  botonPrincipalTexto: { color: '#FFFFFF', fontSize: FONT.titulo - 6, fontWeight: '800', marginLeft: SPACING.sm + 2 },
+  resultados: { marginTop: SPACING.xs },
+  tituloResultados: { fontSize: FONT.subtitulo + 5, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.md - 2 },
   cardGrupo: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg - 6,
+    marginBottom: SPACING.md,
     borderWidth: 1.5,
     borderColor: COLORS.primary,
+    ...SOMBRA_TARJETA,
   },
-  cardGrupoHeader: { borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 10, marginBottom: 10 },
-  cardGrupoNumero: { fontSize: 20, fontWeight: '800', color: COLORS.primaryDark },
-  cardGrupoCabeza: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginTop: 2 },
-  miembroFila: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
-  miembroTexto: { fontSize: 16, color: COLORS.text },
+  cardGrupoHeader: { borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: SPACING.sm + 2, marginBottom: SPACING.sm + 2 },
+  cardGrupoNumero: { fontSize: FONT.subtitulo + 3, fontWeight: '800', color: COLORS.primaryDark },
+  cardGrupoCabeza: { fontSize: FONT.texto, fontWeight: '600', color: COLORS.text, marginTop: 2 },
+  miembroFila: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACING.xs + 2 },
+  miembroTexto: { fontSize: FONT.texto, color: COLORS.text },
 });

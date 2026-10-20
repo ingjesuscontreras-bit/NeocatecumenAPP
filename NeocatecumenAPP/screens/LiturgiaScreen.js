@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { liturgiaHoy } from '../data/liturgia';
-
 import { COLORS } from '../theme/colors';
+import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function LiturgiaScreen() {
   return (
@@ -54,40 +54,41 @@ export default function LiturgiaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { padding: 20, paddingBottom: 60 },
-  titulo: { fontSize: 28, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
-  fecha: { fontSize: 16, color: COLORS.textMuted, marginBottom: 10 },
+  scrollContent: { padding: SPACING.lg - 4, paddingBottom: SPACING.xl + 28 },
+  titulo: { fontSize: FONT.titulo, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.xs },
+  fecha: { fontSize: FONT.texto, color: COLORS.textMuted, marginBottom: SPACING.sm + 2 },
   badgeTiempo: {
     alignSelf: 'flex-start',
     backgroundColor: '#EFEBFC',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginBottom: 20,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md - 2,
+    paddingVertical: SPACING.xs + 2,
+    marginBottom: SPACING.lg - 4,
   },
-  badgeTiempoTexto: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
+  badgeTiempoTexto: { fontSize: FONT.pequeno - 1, fontWeight: '700', color: COLORS.primary },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg - 6,
+    marginBottom: SPACING.md - 2,
     borderWidth: 1,
     borderColor: COLORS.border,
+    ...SOMBRA_TARJETA,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  cardTitulo: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginLeft: 8 },
-  referencia: { fontSize: 15, fontWeight: '700', color: COLORS.primary, marginBottom: 6 },
-  resumen: { fontSize: 15, color: COLORS.textMuted, lineHeight: 21 },
-  tituloSeccion: { fontSize: 20, fontWeight: '800', color: COLORS.text, marginTop: 10, marginBottom: 12 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm + 2 },
+  cardTitulo: { fontSize: FONT.subtitulo, fontWeight: '700', color: COLORS.text, marginLeft: SPACING.sm },
+  referencia: { fontSize: FONT.texto - 1, fontWeight: '700', color: COLORS.primary, marginBottom: SPACING.xs + 2 },
+  resumen: { fontSize: FONT.texto - 1, color: COLORS.textMuted, lineHeight: 21 },
+  tituloSeccion: { fontSize: FONT.subtitulo + 3, fontWeight: '800', color: COLORS.text, marginTop: SPACING.sm + 2, marginBottom: SPACING.md - 2 },
   cardCanto: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    borderRadius: RADIUS.sm + 2,
+    padding: SPACING.md - 2,
+    marginBottom: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  cantoTexto: { fontSize: 16, color: COLORS.text, marginLeft: 10 },
+  cantoTexto: { fontSize: FONT.texto, color: COLORS.text, marginLeft: SPACING.sm + 2 },
 });

@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useComunidad } from '../context/ComunidadContext';
-
 import { COLORS } from '../theme/colors';
+import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function AdminAccesoScreen({ onVolver }) {
-  const { loginAdmin, crearComunidad } = useComunidad();
+  const { loginAdmin, crearComunidad, recuperarContrasena } = useComunidad();
   const [modoCrear, setModoCrear] = useState(false);
   const [nombreComunidad, setNombreComunidad] = useState('');
   const [email, setEmail] = useState('');
@@ -38,7 +38,7 @@ export default function AdminAccesoScreen({ onVolver }) {
         const codigo = await crearComunidad(nombreComunidad.trim(), email.trim(), password);
         Alert.alert(
           '¡Comunidad creada!',
-          `Tu código de acceso es:\n\n${codigo}\n\nCompártelo con los hermanos de tu comunidad para que puedan unirse. Guárdalo, lo verás también en tu panel.`
+          `Tu código de acceso es:\n\n${codigo}\n\nCompártelo con los hermanos de tu comunidad.`
         );
       } else {
         await loginAdmin(email.trim(), password);
@@ -48,6 +48,16 @@ export default function AdminAccesoScreen({ onVolver }) {
     } finally {
       setCargando(false);
     }
+  };
+
+  const handleRecuperarContrasena = () => {
+    if (!email.trim()) {
+      Alert.alert('Falta tu correo', 'Escribe tu correo arriba primero.');
+      return;
+    }
+    recuperarContrasena(email.trim())
+      .then(() => Alert.alert('Correo enviado', 'Revisa tu bandeja de entrada para restablecer tu contraseña.'))
+      .catch(() => Alert.alert('Error', 'No se pudo enviar el correo. Verifica que esté bien escrito.'));
   };
 
   return (
@@ -104,6 +114,12 @@ export default function AdminAccesoScreen({ onVolver }) {
         )}
       </TouchableOpacity>
 
+      {!modoCrear && (
+        <TouchableOpacity onPress={handleRecuperarContrasena} style={styles.link}>
+          <Text style={styles.linkTexto}>¿Olvidaste tu contraseña?</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity onPress={() => setModoCrear(!modoCrear)} style={styles.link}>
         <Text style={styles.linkTexto}>
           {modoCrear ? '¿Ya tienes una comunidad? Inicia sesión' : '¿Primera vez? Crea tu comunidad'}
@@ -126,30 +142,39 @@ function traducirError(codigo) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: COLORS.background, padding: 24, justifyContent: 'center' },
-  botonVolver: { position: 'absolute', top: 50, left: 20 },
-  titulo: { fontSize: 24, fontWeight: '800', color: COLORS.text, textAlign: 'center', marginBottom: 24 },
+  container: { flexGrow: 1, backgroundColor: COLORS.background, padding: SPACING.lg, justifyContent: 'center' },
+  botonVolver: { position: 'absolute', top: 50, left: SPACING.lg - 4 },
+  titulo: { fontSize: FONT.titulo - 4, fontWeight: '800', color: COLORS.text, textAlign: 'center', marginBottom: SPACING.lg },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg - 4,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
+    ...SOMBRA_TARJETA,
   },
-  label: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 6, marginTop: 10 },
+  label: { fontSize: FONT.subtitulo - 2, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs + 2, marginTop: SPACING.sm + 2 },
   input: {
     borderWidth: 2,
     borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 16,
+    borderRadius: RADIUS.sm + 2,
+    paddingVertical: SPACING.sm + 4,
+    paddingHorizontal: SPACING.md - 2,
+    fontSize: FONT.texto,
     color: COLORS.text,
     backgroundColor: COLORS.background,
   },
-  boton: { backgroundColor: COLORS.accent, borderRadius: 18, paddingVertical: 18, alignItems: 'center' },
-  botonTexto: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  link: { marginTop: 18, alignItems: 'center' },
-  linkTexto: { color: COLORS.primary, fontSize: 15, fontWeight: '700' },
+  boton: {
+    backgroundColor: COLORS.accent,
+    borderRadius: RADIUS.md + 2,
+    paddingVertical: SPACING.lg - 4,
+    alignItems: 'center',
+    ...SOMBRA_TARJETA,
+    shadowColor: COLORS.accent,
+    shadowOpacity: 0.3,
+  },
+  botonTexto: { color: '#FFFFFF', fontSize: FONT.subtitulo + 1, fontWeight: '800' },
+  link: { marginTop: SPACING.md + 2, alignItems: 'center' },
+  linkTexto: { color: COLORS.primary, fontSize: FONT.subtitulo - 2, fontWeight: '700' },
 });

@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
 import { ComunidadProvider, useComunidad } from './context/ComunidadContext';
+import { COLORS } from './theme/colors';
 import BienvenidaScreen from './screens/BienvenidaScreen';
 import UnirseScreen from './screens/UnirseScreen';
 import AdminAccesoScreen from './screens/AdminAccesoScreen';
@@ -25,13 +27,34 @@ const ICONOS = {
   Admin: { activo: 'settings', inactivo: 'settings-outline' },
 };
 
+/**
+ * Envuelve cualquier pantalla para que respete el espacio seguro
+ * de arriba (notch / barra de estado), sin tener que editar cada
+ * pantalla individualmente.
+ */
+function conEspacioSeguro(ComponentePantalla) {
+  return function PantallaEnvuelta(props) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ComponentePantalla {...props} />
+      </SafeAreaView>
+    );
+  };
+}
+
+const InicioConEspacio = conEspacioSeguro(InicioScreen);
+const ComunidadConEspacio = conEspacioSeguro(ComunidadScreen);
+const TombolaConEspacio = conEspacioSeguro(TombolaScreen);
+const LiturgiaConEspacio = conEspacioSeguro(LiturgiaScreen);
+const AdminConEspacio = conEspacioSeguro(AdminScreen);
+
 function AppTabs({ esAdmin }) {
   return (
     <Tab.Navigator
       initialRouteName="Inicio"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#4C3AAE',
+        tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#9089B8',
         tabBarStyle: { height: 78, paddingBottom: 12, paddingTop: 8 },
         tabBarLabelStyle: { fontSize: 13, fontWeight: '700' },
@@ -41,11 +64,11 @@ function AppTabs({ esAdmin }) {
         },
       })}
     >
-      <Tab.Screen name="Inicio" component={InicioScreen} />
-      <Tab.Screen name="Comunidad" component={ComunidadScreen} />
-      <Tab.Screen name="Tómbola" component={TombolaScreen} />
-      <Tab.Screen name="Liturgia" component={LiturgiaScreen} />
-      {esAdmin && <Tab.Screen name="Admin" component={AdminScreen} />}
+      <Tab.Screen name="Inicio" component={InicioConEspacio} />
+      <Tab.Screen name="Comunidad" component={ComunidadConEspacio} />
+      <Tab.Screen name="Tómbola" component={TombolaConEspacio} />
+      <Tab.Screen name="Liturgia" component={LiturgiaConEspacio} />
+      {esAdmin && <Tab.Screen name="Admin" component={AdminConEspacio} />}
     </Tab.Navigator>
   );
 }
@@ -56,9 +79,9 @@ function Portero() {
 
   if (cargando) {
     return (
-      <View style={styles.cargandoContainer}>
-        <ActivityIndicator size="large" color="#4C3AAE" />
-      </View>
+      <SafeAreaView style={styles.cargandoContainer} edges={['top']}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
     );
   }
 
@@ -66,30 +89,43 @@ function Portero() {
   if (modo === 'miembro') return <AppTabs esAdmin={false} />;
 
   if (pantalla === 'unirse') {
-    return <UnirseScreen onVolver={() => setPantalla('bienvenida')} />;
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <UnirseScreen onVolver={() => setPantalla('bienvenida')} />
+      </SafeAreaView>
+    );
   }
   if (pantalla === 'adminAcceso') {
-    return <AdminAccesoScreen onVolver={() => setPantalla('bienvenida')} />;
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AdminAccesoScreen onVolver={() => setPantalla('bienvenida')} />
+      </SafeAreaView>
+    );
   }
   return (
-    <BienvenidaScreen
-      onElegirMiembro={() => setPantalla('unirse')}
-      onElegirAdmin={() => setPantalla('adminAcceso')}
-    />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <BienvenidaScreen
+        onElegirMiembro={() => setPantalla('unirse')}
+        onElegirAdmin={() => setPantalla('adminAcceso')}
+      />
+    </SafeAreaView>
   );
 }
 
 export default function App() {
   return (
-    <ComunidadProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <Portero />
-      </NavigationContainer>
-    </ComunidadProvider>
+    <SafeAreaProvider>
+      <ComunidadProvider>
+        <NavigationContainer>
+          <StatusBar style="dark" />
+          <Portero />
+        </NavigationContainer>
+      </ComunidadProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  cargandoContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F4FB' },
+  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  cargandoContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
 });

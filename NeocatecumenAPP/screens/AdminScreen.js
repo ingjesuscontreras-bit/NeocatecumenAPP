@@ -11,18 +11,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import {
-  collection,
-  getDocs,
-  doc,
-  deleteDoc,
-  writeBatch,
-} from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
 import { parsearHermanosTxt } from '../utils/parsearHermanosTxt';
-
 import { COLORS } from '../theme/colors';
+import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function AdminScreen() {
   const { comunidad, comunidadId, salir } = useComunidad();
@@ -52,7 +46,6 @@ export default function AdminScreen() {
     cargarDatos();
   }, [cargarDatos]);
 
-  // --- Subir y procesar el archivo TXT --------------------------------
   const handleSubirTxt = async () => {
     const resultado = await DocumentPicker.getDocumentAsync({
       type: ['text/plain', 'text/*'],
@@ -72,7 +65,6 @@ export default function AdminScreen() {
         return;
       }
 
-      // Confirmación antes de reemplazar la lista actual
       Alert.alert(
         'Confirmar carga',
         `Se encontraron ${hermanosNuevos.length} hermanos en el archivo.\n` +
@@ -80,11 +72,7 @@ export default function AdminScreen() {
           `\nEsto REEMPLAZARÁ la lista actual de hermanos de tu comunidad. ¿Continuar?`,
         [
           { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Sí, reemplazar',
-            style: 'destructive',
-            onPress: () => guardarHermanosEnFirestore(hermanosNuevos),
-          },
+          { text: 'Sí, reemplazar', style: 'destructive', onPress: () => guardarHermanosEnFirestore(hermanosNuevos) },
         ]
       );
     } catch (error) {
@@ -97,14 +85,11 @@ export default function AdminScreen() {
   const guardarHermanosEnFirestore = async (hermanosNuevos) => {
     try {
       const refHermanos = collection(db, 'comunidades', comunidadId, 'hermanos');
-
-      // 1. Borrar la lista anterior
       const snapActual = await getDocs(refHermanos);
       const batchBorrado = writeBatch(db);
       snapActual.docs.forEach((d) => batchBorrado.delete(d.ref));
       await batchBorrado.commit();
 
-      // 2. Escribir la lista nueva (en bloques de 500, límite de Firestore por batch)
       const bloques = [];
       for (let i = 0; i < hermanosNuevos.length; i += 450) {
         bloques.push(hermanosNuevos.slice(i, i + 450));
@@ -128,7 +113,6 @@ export default function AdminScreen() {
     }
   };
 
-  // --- Expulsar a un miembro -------------------------------------------
   const handleExpulsar = (miembro) => {
     Alert.alert(
       'Expulsar a esta persona',
@@ -164,21 +148,17 @@ export default function AdminScreen() {
       <Text style={styles.titulo}>🛠️ Panel del Responsable</Text>
       <Text style={styles.subtitulo}>{comunidad?.nombre}</Text>
 
-      {/* Código de acceso */}
       <View style={styles.cardCodigo}>
         <Ionicons name="key" size={24} color="#FFFFFF" />
-        <View style={{ marginLeft: 12, flex: 1 }}>
+        <View style={{ marginLeft: SPACING.sm + 4, flex: 1 }}>
           <Text style={styles.cardCodigoLabel}>Código de tu comunidad</Text>
           <Text style={styles.cardCodigoValor}>{comunidad?.codigoAcceso}</Text>
         </View>
       </View>
 
-      {/* Subir TXT */}
       <View style={styles.card}>
         <Text style={styles.cardTitulo}>👨‍👩‍👧‍👦 Lista de hermanos</Text>
-        <Text style={styles.cardTexto}>
-          {hermanos.length} hermano(s) cargado(s) actualmente.
-        </Text>
+        <Text style={styles.cardTexto}>{hermanos.length} hermano(s) cargado(s) actualmente.</Text>
         <TouchableOpacity style={styles.botonSubir} onPress={handleSubirTxt} disabled={subiendoTxt}>
           {subiendoTxt ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -194,7 +174,6 @@ export default function AdminScreen() {
         </Text>
       </View>
 
-      {/* Lista de hermanos cargados */}
       {hermanos.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardTitulo}>Hermanos actuales</Text>
@@ -207,7 +186,6 @@ export default function AdminScreen() {
         </View>
       )}
 
-      {/* Miembros con acceso */}
       <View style={styles.card}>
         <Text style={styles.cardTitulo}>📱 Celulares con acceso ({miembros.length})</Text>
         {miembros.length === 0 && (
@@ -234,64 +212,64 @@ export default function AdminScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   cargandoContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
-  scrollContent: { padding: 20, paddingBottom: 60 },
-  titulo: { fontSize: 26, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
-  subtitulo: { fontSize: 16, color: COLORS.textMuted, marginBottom: 20 },
+  scrollContent: { padding: SPACING.lg - 4, paddingBottom: SPACING.xl + 28 },
+  titulo: { fontSize: FONT.titulo - 2, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.xs },
+  subtitulo: { fontSize: FONT.texto, color: COLORS.textMuted, marginBottom: SPACING.lg - 4 },
   cardCodigo: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg - 6,
+    marginBottom: SPACING.md,
+    ...SOMBRA_TARJETA,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.3,
   },
-  cardCodigoLabel: { fontSize: 13, color: '#D9D3F5', fontWeight: '600' },
-  cardCodigoValor: { fontSize: 22, color: '#FFFFFF', fontWeight: '800', letterSpacing: 2 },
+  cardCodigoLabel: { fontSize: FONT.pequeno - 1, color: '#D9D3F5', fontWeight: '600' },
+  cardCodigoValor: { fontSize: FONT.titulo - 6, color: '#FFFFFF', fontWeight: '800', letterSpacing: 2 },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg - 6,
+    marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    ...SOMBRA_TARJETA,
   },
-  cardTitulo: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
-  cardTexto: { fontSize: 14, color: COLORS.textMuted, marginBottom: 12 },
+  cardTitulo: { fontSize: FONT.subtitulo + 1, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm },
+  cardTexto: { fontSize: FONT.texto - 2, color: COLORS.textMuted, marginBottom: SPACING.sm + 4 },
   botonSubir: {
     flexDirection: 'row',
     backgroundColor: COLORS.accent,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: RADIUS.sm + 4,
+    paddingVertical: SPACING.md - 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  botonSubirTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '700', marginLeft: 8 },
-  ayudaFormato: { fontSize: 12, color: COLORS.textMuted, marginTop: 10, fontStyle: 'italic' },
-  filaHermano: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  filaHermanoNombre: { fontSize: 15, fontWeight: '600', color: COLORS.text },
-  filaHermanoDato: { fontSize: 13, color: COLORS.textMuted },
+  botonSubirTexto: { color: '#FFFFFF', fontSize: FONT.texto - 1, fontWeight: '700', marginLeft: SPACING.sm },
+  ayudaFormato: { fontSize: FONT.pequeno - 2, color: COLORS.textMuted, marginTop: SPACING.sm + 2, fontStyle: 'italic' },
+  filaHermano: { paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  filaHermanoNombre: { fontSize: FONT.texto - 1, fontWeight: '600', color: COLORS.text },
+  filaHermanoDato: { fontSize: FONT.pequeno - 1, color: COLORS.textMuted },
   filaMiembro: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  filaMiembroNombre: { fontSize: 15, color: COLORS.text },
-  botonExpulsar: { padding: 6 },
+  filaMiembroNombre: { fontSize: FONT.texto - 1, color: COLORS.text },
+  botonExpulsar: { padding: SPACING.xs + 2 },
   botonSalir: {
     flexDirection: 'row',
     backgroundColor: COLORS.danger,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: RADIUS.sm + 4,
+    paddingVertical: SPACING.md - 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: SPACING.xs,
   },
-  botonSalirTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '700', marginLeft: 8 },
+  botonSalirTexto: { color: '#FFFFFF', fontSize: FONT.texto - 1, fontWeight: '700', marginLeft: SPACING.sm },
 });

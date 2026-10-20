@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useComunidad } from '../context/ComunidadContext';
-
 import { COLORS } from '../theme/colors';
+import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function UnirseScreen({ onVolver }) {
   const { unirseConCodigo } = useComunidad();
@@ -71,34 +71,44 @@ export default function UnirseScreen({ onVolver }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, padding: 24, justifyContent: 'center' },
-  botonVolver: { position: 'absolute', top: 50, left: 20 },
-  titulo: { fontSize: 24, fontWeight: '800', color: COLORS.text, textAlign: 'center', marginBottom: 24 },
+  container: { flex: 1, backgroundColor: COLORS.background, padding: SPACING.lg, justifyContent: 'center' },
+  botonVolver: { position: 'absolute', top: 50, left: SPACING.lg - 4 },
+  titulo: {
+    fontSize: FONT.titulo - 4,
+    fontWeight: '800',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: SPACING.lg,
+  },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg - 4,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
+    ...SOMBRA_TARJETA,
   },
-  label: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 6, marginTop: 10 },
+  label: { fontSize: FONT.subtitulo - 2, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs + 2, marginTop: SPACING.sm + 2 },
   input: {
     borderWidth: 2,
     borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 16,
+    borderRadius: RADIUS.sm + 2,
+    paddingVertical: SPACING.sm + 4,
+    paddingHorizontal: SPACING.md - 2,
+    fontSize: FONT.texto,
     color: COLORS.text,
     backgroundColor: COLORS.background,
   },
-  inputCodigo: { fontSize: 20, fontWeight: '700', letterSpacing: 2, textAlign: 'center' },
+  inputCodigo: { fontSize: FONT.titulo - 8, fontWeight: '700', letterSpacing: 2, textAlign: 'center' },
   boton: {
     backgroundColor: COLORS.accent,
-    borderRadius: 18,
-    paddingVertical: 18,
+    borderRadius: RADIUS.md + 2,
+    paddingVertical: SPACING.lg - 4,
     alignItems: 'center',
+    ...SOMBRA_TARJETA,
+    shadowColor: COLORS.accent,
+    shadowOpacity: 0.3,
   },
-  botonTexto: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
+  botonTexto: { color: '#FFFFFF', fontSize: FONT.subtitulo + 1, fontWeight: '800' },
 });
