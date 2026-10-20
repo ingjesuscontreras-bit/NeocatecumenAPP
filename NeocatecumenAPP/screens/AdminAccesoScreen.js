@@ -61,71 +61,76 @@ export default function AdminAccesoScreen({ onVolver }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity onPress={onVolver} style={styles.botonVolver}>
-        <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-      </TouchableOpacity>
-
-      <Text style={styles.titulo}>
-        {modoCrear ? 'Crear mi comunidad' : 'Acceso del Responsable'}
-      </Text>
-
-      <View style={styles.card}>
-        {modoCrear && (
-          <>
-            <Text style={styles.label}>Nombre de la comunidad</Text>
-            <TextInput
-              style={styles.input}
-              value={nombreComunidad}
-              onChangeText={setNombreComunidad}
-              placeholder="Ej: San Juan Bautista"
-              placeholderTextColor={COLORS.textMuted}
-            />
-          </>
-        )}
-
-        <Text style={styles.label}>Correo</Text>
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="correo@ejemplo.com"
-          placeholderTextColor={COLORS.textMuted}
-        />
-
-        <Text style={styles.label}>Contraseña</Text>
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="Mínimo 6 caracteres"
-          placeholderTextColor={COLORS.textMuted}
-        />
+    <View style={styles.pantalla}>
+      {/* Fila fija de arriba, nunca se superpone con el contenido */}
+      <View style={styles.headerFila}>
+        <TouchableOpacity onPress={onVolver} style={styles.botonVolver} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.boton} onPress={handleEnviar} disabled={cargando}>
-        {cargando ? (
-          <ActivityIndicator color="#FFF" />
-        ) : (
-          <Text style={styles.botonTexto}>{modoCrear ? 'Crear comunidad' : 'Entrar'}</Text>
-        )}
-      </TouchableOpacity>
-
-      {!modoCrear && (
-        <TouchableOpacity onPress={handleRecuperarContrasena} style={styles.link}>
-          <Text style={styles.linkTexto}>¿Olvidaste tu contraseña?</Text>
-        </TouchableOpacity>
-      )}
-
-      <TouchableOpacity onPress={() => setModoCrear(!modoCrear)} style={styles.link}>
-        <Text style={styles.linkTexto}>
-          {modoCrear ? '¿Ya tienes una comunidad? Inicia sesión' : '¿Primera vez? Crea tu comunidad'}
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.titulo}>
+          {modoCrear ? 'Crear mi comunidad' : 'Acceso del Responsable'}
         </Text>
-      </TouchableOpacity>
-    </ScrollView>
+
+        <View style={styles.card}>
+          {modoCrear && (
+            <>
+              <Text style={styles.label}>Nombre de la comunidad</Text>
+              <TextInput
+                style={styles.input}
+                value={nombreComunidad}
+                onChangeText={setNombreComunidad}
+                placeholder="Ej: San Juan Bautista"
+                placeholderTextColor={COLORS.textMuted}
+              />
+            </>
+          )}
+
+          <Text style={styles.label}>Correo</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="correo@ejemplo.com"
+            placeholderTextColor={COLORS.textMuted}
+          />
+
+          <Text style={styles.label}>Contraseña</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="Mínimo 6 caracteres"
+            placeholderTextColor={COLORS.textMuted}
+          />
+        </View>
+
+        <TouchableOpacity style={styles.boton} onPress={handleEnviar} disabled={cargando}>
+          {cargando ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.botonTexto}>{modoCrear ? 'Crear comunidad' : 'Entrar'}</Text>
+          )}
+        </TouchableOpacity>
+
+        {!modoCrear && (
+          <TouchableOpacity onPress={handleRecuperarContrasena} style={styles.link}>
+            <Text style={styles.linkTexto}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity onPress={() => setModoCrear(!modoCrear)} style={styles.link}>
+          <Text style={styles.linkTexto}>
+            {modoCrear ? '¿Ya tienes una comunidad? Inicia sesión' : '¿Primera vez? Crea tu comunidad'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -142,8 +147,16 @@ function traducirError(codigo) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: COLORS.background, padding: SPACING.lg, justifyContent: 'center' },
-  botonVolver: { position: 'absolute', top: 50, left: SPACING.lg - 4 },
+  pantalla: { flex: 1, backgroundColor: COLORS.background },
+  headerFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg - 4,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+  },
+  botonVolver: { padding: SPACING.xs + 2 },
+  container: { flexGrow: 1, padding: SPACING.lg, paddingTop: SPACING.sm, justifyContent: 'center' },
   titulo: { fontSize: FONT.titulo - 4, fontWeight: '800', color: COLORS.text, textAlign: 'center', marginBottom: SPACING.lg },
   card: {
     backgroundColor: COLORS.card,
