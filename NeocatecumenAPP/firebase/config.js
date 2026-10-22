@@ -1,11 +1,11 @@
 /**
  * firebase/config.js
- * Inicializa la conexión con Firebase (Auth, Firestore, Storage).
+ * Conexión con Firebase. La sesión se guarda en el teléfono (AsyncStorage).
  */
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import * as AsyncStorageModule from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCaCuGAKpANrkG5zuwVMQH9gcJ76in4A0s",
@@ -16,9 +16,23 @@ const firebaseConfig = {
   appId: "1:461425532988:web:6673957d55b36f69502339",
 };
 
-// Evita el error de "Firebase App already initialized" al recargar la app
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Compatible con las dos versiones de AsyncStorage (v2 y v3)
+const almacenamiento = AsyncStorageModule.createAsyncStorage
+  ? AsyncStorageModule.createAsyncStorage('firebase-auth')
+  : AsyncStorageModule.default;
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+let app;
+let auth;
+
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+  auth = initializeAuth(app, { persistence: getReactNativePersistence(almacenamiento) });
+} else {
+  // Al recargar la app en desarrollo, reutiliza lo ya iniciado
+  app = getApp();
+  auth = getAuth(app);
+}
+
+const db = getFirestore(app);
+
+export { auth, db };

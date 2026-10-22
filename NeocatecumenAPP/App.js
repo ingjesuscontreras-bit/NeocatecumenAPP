@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, BackHandler, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -27,11 +27,7 @@ const ICONOS = {
   Admin: { activo: 'settings', inactivo: 'settings-outline' },
 };
 
-/**
- * Envuelve cualquier pantalla para que respete el espacio seguro
- * de arriba (notch / barra de estado), sin tener que editar cada
- * pantalla individualmente.
- */
+// Envuelve una pantalla para respetar el espacio seguro de arriba (notch)
 function conEspacioSeguro(ComponentePantalla) {
   return function PantallaEnvuelta(props) {
     return (
@@ -75,7 +71,22 @@ function AppTabs({ esAdmin }) {
 
 function Portero() {
   const { modo, cargando } = useComunidad();
+  // Siempre arranca en 'bienvenida'
   const [pantalla, setPantalla] = useState('bienvenida');
+
+  const volverABienvenida = () => setPantalla('bienvenida');
+
+  // Botón físico "atrás" de Android: vuelve a Bienvenida si estás en otra pantalla
+  useEffect(() => {
+    const suscripcion = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (pantalla !== 'bienvenida') {
+        setPantalla('bienvenida');
+        return true;
+      }
+      return false;
+    });
+    return () => suscripcion.remove();
+  }, [pantalla]);
 
   if (cargando) {
     return (
@@ -91,17 +102,19 @@ function Portero() {
   if (pantalla === 'unirse') {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <UnirseScreen onVolver={() => setPantalla('bienvenida')} />
+        <UnirseScreen onVolver={volverABienvenida} />
       </SafeAreaView>
     );
   }
+
   if (pantalla === 'adminAcceso') {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <AdminAccesoScreen onVolver={() => setPantalla('bienvenida')} />
+        <AdminAccesoScreen onVolver={volverABienvenida} />
       </SafeAreaView>
     );
   }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <BienvenidaScreen
