@@ -7,18 +7,15 @@ import {
   StyleSheet,
   Linking,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
-import {
-  informacionLiturgica,
-  HORAS,
-  urlHora,
-  URL_LECTURAS,
-  urlSantoDelDia,
-} from '../utils/liturgia';
+import { informacionLiturgica, urlSantoDelDia } from '../utils/liturgia';
+import { obtenerSanto, claveFecha } from '../utils/evangelio';
 import { SANTOS_POR_PAIS } from '../utils/santosPais';
+import EvangelioDia from './EvangelioDia';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT } from '../theme/layout';
 
@@ -49,8 +46,12 @@ async function detectarPais() {
 }
 
 export default function LiturgiaHoy() {
+  const navigation = useNavigation();
   const [hoy, setHoy] = useState(new Date());
   const [codigoPais, setCodigoPais] = useState(null);
+  const [santo, setSanto] = useState(null);
+  const [cargandoSanto, setCargandoSanto] = useState(true);
+  const claveHoy = claveFecha(hoy);
 
   // Actualiza la fecha cada vez que entras a la pestaña
   useFocusEffect(
@@ -69,6 +70,27 @@ export default function LiturgiaHoy() {
     };
   }, []);
 
+  // Pre-búsqueda del santo del día al abrir la app
+  useEffect(() => {
+    let activo = true;
+    setCargandoSanto(true);
+    obtenerSanto(hoy)
+      .then((nombre) => {
+        if (activo) setSanto(nombre);
+      })
+      .catch((error) => {
+        console.log('No se pudo cargar el santo del día:', error?.message);
+        if (activo) setSanto(null);
+      })
+      .finally(() => {
+        if (activo) setCargandoSanto(false);
+      });
+    return () => {
+      activo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveHoy]);
+
   const info = informacionLiturgica(hoy);
   const datosPais = codigoPais ? SANTOS_POR_PAIS[codigoPais] : null;
 
@@ -82,7 +104,7 @@ export default function LiturgiaHoy() {
 
   return (
     <ScrollView contentContainerStyle={styles.contenido}>
-      {/* ---------- Liturgia de las Horas ---------- */}
+      {/* ---------- Liturgia de las Horas (solo información general) ---------- */}
       <View style={styles.card}>
         <View style={styles.encabezado}>
           <Ionicons name="book" size={22} color={COLORS.primary} />
@@ -99,31 +121,19 @@ export default function LiturgiaHoy() {
           {info.salterio ? `  ·  Salterio: ${info.salterio}ª semana` : ''}
         </Text>
 
-        {HORAS.map((h) => (
-          <TouchableOpacity
-            key={h.clave}
-            style={styles.fila}
-            onPress={() => abrir(urlHora(h.clave))}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={h.icono} size={22} color={COLORS.primary} />
-            <Text style={styles.filaTexto}>{h.nombre}</Text>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-          </TouchableOpacity>
-        ))}
-
         <TouchableOpacity
           style={styles.fila}
-          onPress={() => abrir(URL_LECTURAS)}
+          onPress={() => navigation.navigate('Liturgia')}
           activeOpacity={0.7}
         >
-          <Ionicons name="reader-outline" size={22} color={COLORS.accent} />
-          <Text style={styles.filaTexto}>Lecturas de la Misa del día</Text>
+          <Ionicons name="arrow-forward-circle-outline" size={22} color={COLORS.primary} />
+          <Text style={styles.filaTexto}>Rezar las horas y leer la Misa del día</Text>
           <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
         </TouchableOpacity>
-
-        <Text style={styles.credito}>Los textos se abren en iBreviary (Pro Terra Sancta).</Text>
       </View>
+
+      {/* ---------- Evangelio del día ---------- */}
+      <EvangelioDia fecha={hoy} />
 
       {/* ---------- Santo del día ---------- */}
       <View style={styles.card}>
@@ -131,14 +141,25 @@ export default function LiturgiaHoy() {
           <Ionicons name="sparkles" size={22} color={COLORS.accent} />
           <Text style={styles.cardTitulo}>Santo del día</Text>
         </View>
-        <Text style={styles.linea}>Hoy, {info.fechaCorta}</Text>
+        <Text style={styles.lineaSuave}>Hoy, {info.fechaCorta}</Text>
+
+        {cargandoSanto && <ActivityIndicator color={COLORS.accent} style={{ marginBottom: SPACING.sm }} />}
+
+        {!cargandoSanto && santo ? (
+          <Text style={styles.santoDia} numberOfLines={4}>
+            {santo}
+          </Text>
+        ) : null}
+
         <TouchableOpacity
           style={styles.botonSecundario}
-          onPress={() => abrir(urlSantoDelDia(info.fechaCorta))}
+          onPress={() => abrir(urlSantoDelDia(info.fechaCorta, santo))}
           activeOpacity={0.8}
         >
           <Ionicons name="open-outline" size={20} color={COLORS.primary} />
-          <Text style={styles.botonSecundarioTexto}>Ver el santo de hoy</Text>
+          <Text style={styles.botonSecundarioTexto}>
+            {santo ? 'Ver más sobre este santo' : 'Ver el santo de hoy'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -186,6 +207,7 @@ const styles = StyleSheet.create({
   fecha: { fontSize: FONT.subtitulo, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
   linea: { fontSize: FONT.texto, color: COLORS.text, marginBottom: SPACING.xs },
   lineaSuave: { fontSize: FONT.pequeno, color: COLORS.textMuted, marginBottom: SPACING.sm },
+  santoDia: { fontSize: FONT.subtitulo, fontWeight: '700', color: COLORS.text, lineHeight: 24, marginBottom: SPACING.sm },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -195,10 +217,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     paddingHorizontal: SPACING.md - 2,
-    marginTop: SPACING.sm,
+    marginTop: SPACING.xs,
   },
-  filaTexto: { flex: 1, fontSize: FONT.texto, fontWeight: '600', color: COLORS.text, marginLeft: SPACING.sm + 2 },
-  credito: { fontSize: FONT.pequeno - 2, color: COLORS.textMuted, fontStyle: 'italic', marginTop: SPACING.sm + 2 },
+  filaTexto: { flex: 1, fontSize: FONT.texto - 1, fontWeight: '600', color: COLORS.text, marginLeft: SPACING.sm + 2 },
   botonSecundario: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -13,7 +13,7 @@ import UnirseScreen from './screens/UnirseScreen';
 import AdminAccesoScreen from './screens/AdminAccesoScreen';
 import InicioScreen from './screens/InicioScreen';
 import ComunidadScreen from './screens/ComunidadScreen';
-import TombolaScreen from './screens/TombolaScreen';
+import NoticiasScreen from './screens/NoticiasScreen';
 import LiturgiaScreen from './screens/LiturgiaScreen';
 import AdminScreen from './screens/AdminScreen';
 
@@ -22,7 +22,7 @@ const Tab = createBottomTabNavigator();
 const ICONOS = {
   Inicio: { activo: 'home', inactivo: 'home-outline' },
   Comunidad: { activo: 'people', inactivo: 'people-outline' },
-  Tómbola: { activo: 'gift', inactivo: 'gift-outline' },
+  Noticias: { activo: 'newspaper', inactivo: 'newspaper-outline' },
   Liturgia: { activo: 'book', inactivo: 'book-outline' },
   Admin: { activo: 'settings', inactivo: 'settings-outline' },
 };
@@ -40,7 +40,7 @@ function conEspacioSeguro(ComponentePantalla) {
 
 const InicioConEspacio = conEspacioSeguro(InicioScreen);
 const ComunidadConEspacio = conEspacioSeguro(ComunidadScreen);
-const TombolaConEspacio = conEspacioSeguro(TombolaScreen);
+const NoticiasConEspacio = conEspacioSeguro(NoticiasScreen);
 const LiturgiaConEspacio = conEspacioSeguro(LiturgiaScreen);
 const AdminConEspacio = conEspacioSeguro(AdminScreen);
 
@@ -62,8 +62,9 @@ function AppTabs({ esAdmin }) {
     >
       <Tab.Screen name="Inicio" component={InicioConEspacio} />
       <Tab.Screen name="Comunidad" component={ComunidadConEspacio} />
-      <Tab.Screen name="Tómbola" component={TombolaConEspacio} />
+      <Tab.Screen name="Noticias" component={NoticiasConEspacio} />
       <Tab.Screen name="Liturgia" component={LiturgiaConEspacio} />
+      {/* La Tómbola vive dentro del panel Admin (solo para el Responsable) */}
       {esAdmin && <Tab.Screen name="Admin" component={AdminConEspacio} />}
     </Tab.Navigator>
   );

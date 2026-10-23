@@ -202,7 +202,11 @@ const BASE = 'http://www.ibreviary.com/m2';
 export const urlHora = (clave) => `${BASE}/breviario.php?s=${clave}&b=1&lang=es`;
 export const URL_LECTURAS = `${BASE}/letture.php?b=1&lang=es`;
 
-export function urlSantoDelDia(fechaCorta) {
-  const consulta = `santo del día ${fechaCorta} santoral católico`;
+// Búsqueda del santo: con el nombre (si ya lo tenemos) o con la fecha
+export function urlSantoDelDia(fechaCorta, nombre) {
+  const primeraLinea = nombre ? nombre.split('\n')[0].trim().slice(0, 80) : '';
+  const consulta = primeraLinea
+    ? `${primeraLinea} santo vida biografía`
+    : `santo del día ${fechaCorta} santoral católico`;
   return `https://www.google.com/search?q=${encodeURIComponent(consulta)}`;
 }
