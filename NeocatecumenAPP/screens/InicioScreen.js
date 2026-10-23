@@ -15,6 +15,8 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
 import LiturgiaHoy from '../components/LiturgiaHoy';
+import AvisosComunidad from '../components/AvisosComunidad';
+import { ordenarProximas } from '../utils/eventos';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
@@ -23,14 +25,14 @@ export default function InicioScreen() {
   const [celebraciones, setCelebraciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
+  const [refresco, setRefresco] = useState(0); // le avisa a los avisos que recarguen
 
   const cargar = useCallback(async () => {
     if (!comunidadId) return;
     try {
       const snap = await getDocs(collection(db, 'comunidades', comunidadId, 'celebraciones'));
       const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      lista.sort((a, b) => (b.creadoEn || '').localeCompare(a.creadoEn || ''));
-      setCelebraciones(lista);
+      setCelebraciones(ordenarProximas(lista));
     } catch (error) {
       console.log('Error cargando celebraciones:', error);
     } finally {
@@ -67,6 +69,7 @@ export default function InicioScreen() {
               refreshing={refrescando}
               onRefresh={() => {
                 setRefrescando(true);
+                setRefresco((n) => n + 1);
                 cargar();
               }}
               tintColor={COLORS.primary}
@@ -91,6 +94,8 @@ export default function InicioScreen() {
             </TouchableOpacity>
           </View>
 
+          <AvisosComunidad refresco={refresco} />
+
           <Text style={styles.tituloSeccion}>Próximos encuentros</Text>
 
           {cargando && <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.md }} />}
@@ -99,7 +104,7 @@ export default function InicioScreen() {
             <View style={styles.cardVacia}>
               <Ionicons name="calendar-outline" size={28} color={COLORS.textMuted} />
               <Text style={styles.vaciaTexto}>
-                Tu responsable todavía no ha publicado celebraciones.
+                No hay encuentros próximos. Tu responsable publicará los siguientes.
               </Text>
             </View>
           )}

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useComunidad } from '../context/ComunidadContext';
 import AdminHermanos from '../components/AdminHermanos';
 import AdminCelebraciones from '../components/AdminCelebraciones';
+   import AdminAvisos from '../components/AdminAvisos';
 import AdminRecursos from '../components/AdminRecursos';
 import AdminMiembros from '../components/AdminMiembros';
 import TombolaScreen from './TombolaScreen';
@@ -94,6 +95,7 @@ export default function AdminScreen() {
         <Ionicons name="chevron-forward" size={22} color={COLORS.textMuted} />
       </TouchableOpacity>
 
+   <AdminAvisos />  
       <AdminCelebraciones />
       <AdminRecursos />
       <AdminHermanos />

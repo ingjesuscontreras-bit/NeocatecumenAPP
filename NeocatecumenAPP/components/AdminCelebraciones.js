@@ -7,16 +7,77 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { collection, getDocs, doc, deleteDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
+import { textoFecha, textoHora, separar, fechaPorDefecto } from '../utils/eventos';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 function generarId() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Cambia solo la fecha o solo la hora de un Date, sin tocar lo otro
+function combinar(base, seleccion, modo) {
+  const nuevo = new Date(base);
+  if (modo === 'date') {
+    nuevo.setFullYear(seleccion.getFullYear(), seleccion.getMonth(), seleccion.getDate());
+  } else {
+    nuevo.setHours(seleccion.getHours(), seleccion.getMinutes(), 0, 0);
+  }
+  return nuevo;
+}
+
+// Selector de fecha y hora (Android abre ventanitas; iPhone muestra selectores compactos)
+function CampoFechaHora({ valor, onCambio }) {
+  if (Platform.OS === 'android') {
+    const abrir = (modo) => {
+      DateTimePickerAndroid.open({
+        value: valor,
+        mode: modo,
+        is24Hour: false,
+        onChange: (evento, seleccion) => {
+          if (evento.type === 'set' && seleccion) onCambio(combinar(valor, seleccion, modo));
+        },
+      });
+    };
+    return (
+      <View style={styles.filaFecha}>
+        <TouchableOpacity style={styles.botonFecha} onPress={() => abrir('date')}>
+          <Ionicons name="calendar-outline" size={18} color={COLORS.primary} />
+          <Text style={styles.botonFechaTexto}>{textoFecha(valor)}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.botonFecha} onPress={() => abrir('time')}>
+          <Ionicons name="time-outline" size={18} color={COLORS.primary} />
+          <Text style={styles.botonFechaTexto}>{textoHora(valor)}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.filaFecha}>
+      <DateTimePicker
+        value={valor}
+        mode="date"
+        display="compact"
+        locale="es-ES"
+        onChange={(evento, seleccion) => seleccion && onCambio(combinar(valor, seleccion, 'date'))}
+      />
+      <DateTimePicker
+        value={valor}
+        mode="time"
+        display="compact"
+        locale="es-ES"
+        onChange={(evento, seleccion) => seleccion && onCambio(combinar(valor, seleccion, 'time'))}
+      />
+    </View>
+  );
 }
 
 export default function AdminCelebraciones() {
@@ -26,16 +87,14 @@ export default function AdminCelebraciones() {
 
   // Formulario para publicar una nueva
   const [titulo, setTitulo] = useState('');
-  const [fecha, setFecha] = useState('');
-  const [hora, setHora] = useState('');
+  const [fechaHora, setFechaHora] = useState(fechaPorDefecto());
   const [lugar, setLugar] = useState('');
   const [publicando, setPublicando] = useState(false);
 
   // Edición de una existente
   const [editandoId, setEditandoId] = useState(null);
   const [edTitulo, setEdTitulo] = useState('');
-  const [edFecha, setEdFecha] = useState('');
-  const [edHora, setEdHora] = useState('');
+  const [edFechaHora, setEdFechaHora] = useState(new Date());
   const [edLugar, setEdLugar] = useState('');
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
@@ -44,9 +103,7 @@ export default function AdminCelebraciones() {
     setCargando(true);
     try {
       const snap = await getDocs(collection(db, 'comunidades', comunidadId, 'celebraciones'));
-      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      lista.sort((a, b) => (b.creadoEn || '').localeCompare(a.creadoEn || ''));
-      setCelebraciones(lista);
+      setCelebraciones(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (error) {
       Alert.alert('Error al cargar celebraciones', error.message);
     } finally {
@@ -58,25 +115,29 @@ export default function AdminCelebraciones() {
     cargar();
   }, [cargar]);
 
+  const datosDeFecha = (d) => ({
+    fecha: textoFecha(d),
+    hora: textoHora(d),
+    fechaHora: d.toISOString(),
+  });
+
   // ---------- Publicar ----------
   const handlePublicar = async () => {
-    if (!titulo.trim() || !fecha.trim()) {
-      Alert.alert('Faltan datos', 'Escribe al menos el título y la fecha.');
+    if (!titulo.trim()) {
+      Alert.alert('Falta el título', 'Escribe el nombre de la celebración.');
       return;
     }
     setPublicando(true);
     try {
       await setDoc(doc(db, 'comunidades', comunidadId, 'celebraciones', generarId()), {
         titulo: titulo.trim(),
-        fecha: fecha.trim(),
-        hora: hora.trim(),
         lugar: lugar.trim(),
+        ...datosDeFecha(fechaHora),
         creadoEn: new Date().toISOString(),
       });
       setTitulo('');
-      setFecha('');
-      setHora('');
       setLugar('');
+      setFechaHora(fechaPorDefecto());
       await cargar();
       Alert.alert('¡Publicado!', 'La celebración ya está visible para tu comunidad.');
     } catch (error) {
@@ -90,27 +151,21 @@ export default function AdminCelebraciones() {
   const iniciarEdicion = (c) => {
     setEditandoId(c.id);
     setEdTitulo(c.titulo || '');
-    setEdFecha(c.fecha || '');
-    setEdHora(c.hora || '');
     setEdLugar(c.lugar || '');
-  };
-
-  const cancelarEdicion = () => {
-    setEditandoId(null);
+    setEdFechaHora(c.fechaHora ? new Date(c.fechaHora) : fechaPorDefecto());
   };
 
   const guardarEdicion = async (id) => {
-    if (!edTitulo.trim() || !edFecha.trim()) {
-      Alert.alert('Faltan datos', 'El título y la fecha no pueden quedar vacíos.');
+    if (!edTitulo.trim()) {
+      Alert.alert('Falta el título', 'El título no puede quedar vacío.');
       return;
     }
     setGuardandoEdicion(true);
     try {
       const datos = {
         titulo: edTitulo.trim(),
-        fecha: edFecha.trim(),
-        hora: edHora.trim(),
         lugar: edLugar.trim(),
+        ...datosDeFecha(edFechaHora),
       };
       await updateDoc(doc(db, 'comunidades', comunidadId, 'celebraciones', id), datos);
       setCelebraciones((prev) => prev.map((c) => (c.id === id ? { ...c, ...datos } : c)));
@@ -141,10 +196,74 @@ export default function AdminCelebraciones() {
     ]);
   };
 
+  const { proximas, pasadas } = separar(celebraciones);
+
+  const renderFila = (c) => (
+    <View key={c.id} style={styles.fila}>
+      {editandoId === c.id ? (
+        <View style={{ flex: 1 }}>
+          <TextInput
+            style={styles.inputEdicion}
+            value={edTitulo}
+            onChangeText={setEdTitulo}
+            placeholder="Título"
+            placeholderTextColor={COLORS.textMuted}
+          />
+          <CampoFechaHora valor={edFechaHora} onCambio={setEdFechaHora} />
+          <TextInput
+            style={styles.inputEdicion}
+            value={edLugar}
+            onChangeText={setEdLugar}
+            placeholder="Lugar"
+            placeholderTextColor={COLORS.textMuted}
+          />
+          <View style={styles.filaBotones}>
+            <TouchableOpacity
+              onPress={() => guardarEdicion(c.id)}
+              style={styles.botonOk}
+              disabled={guardandoEdicion}
+            >
+              {guardandoEdicion ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.botonOkTexto}>Guardar</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditandoId(null)} style={styles.botonCancelar}>
+              <Text style={styles.botonCancelarTexto}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.filaTitulo}>{c.titulo}</Text>
+            <Text style={styles.filaDato}>
+              {c.fecha}
+              {c.hora ? ` · ${c.hora}` : ''}
+            </Text>
+            {c.lugar ? <Text style={styles.filaDato}>📍 {c.lugar}</Text> : null}
+            {!c.fechaHora ? (
+              <Text style={styles.aviso}>Sin fecha exacta: edítala para que se oculte sola.</Text>
+            ) : null}
+          </View>
+          <TouchableOpacity onPress={() => iniciarEdicion(c)} style={styles.botonIcono}>
+            <Ionicons name="pencil-outline" size={18} color={COLORS.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleEliminar(c)} style={styles.botonIcono}>
+            <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitulo}>📅 Celebraciones</Text>
-      <Text style={styles.texto}>Publica los próximos encuentros de tu comunidad.</Text>
+      <Text style={styles.texto}>
+        Publica los próximos encuentros. Se ocultan solos cuando pasa su hora.
+      </Text>
 
       <Text style={styles.label}>Título</Text>
       <TextInput
@@ -155,23 +274,8 @@ export default function AdminCelebraciones() {
         placeholderTextColor={COLORS.textMuted}
       />
 
-      <Text style={styles.label}>Fecha</Text>
-      <TextInput
-        style={styles.input}
-        value={fecha}
-        onChangeText={setFecha}
-        placeholder="Ej: Sábado 24 de octubre"
-        placeholderTextColor={COLORS.textMuted}
-      />
-
-      <Text style={styles.label}>Hora</Text>
-      <TextInput
-        style={styles.input}
-        value={hora}
-        onChangeText={setHora}
-        placeholder="Ej: 7:30 PM"
-        placeholderTextColor={COLORS.textMuted}
-      />
+      <Text style={styles.label}>Fecha y hora</Text>
+      <CampoFechaHora valor={fechaHora} onCambio={setFechaHora} />
 
       <Text style={styles.label}>Lugar</Text>
       <TextInput
@@ -195,75 +299,11 @@ export default function AdminCelebraciones() {
 
       {cargando && <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.md }} />}
 
-      {celebraciones.map((c) => (
-        <View key={c.id} style={styles.fila}>
-          {editandoId === c.id ? (
-            <View style={{ flex: 1 }}>
-              <TextInput
-                style={styles.inputEdicion}
-                value={edTitulo}
-                onChangeText={setEdTitulo}
-                placeholder="Título"
-                placeholderTextColor={COLORS.textMuted}
-              />
-              <TextInput
-                style={styles.inputEdicion}
-                value={edFecha}
-                onChangeText={setEdFecha}
-                placeholder="Fecha"
-                placeholderTextColor={COLORS.textMuted}
-              />
-              <TextInput
-                style={styles.inputEdicion}
-                value={edHora}
-                onChangeText={setEdHora}
-                placeholder="Hora"
-                placeholderTextColor={COLORS.textMuted}
-              />
-              <TextInput
-                style={styles.inputEdicion}
-                value={edLugar}
-                onChangeText={setEdLugar}
-                placeholder="Lugar"
-                placeholderTextColor={COLORS.textMuted}
-              />
-              <View style={styles.filaBotones}>
-                <TouchableOpacity
-                  onPress={() => guardarEdicion(c.id)}
-                  style={styles.botonOk}
-                  disabled={guardandoEdicion}
-                >
-                  {guardandoEdicion ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.botonOkTexto}>Guardar</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity onPress={cancelarEdicion} style={styles.botonCancelar}>
-                  <Text style={styles.botonCancelarTexto}>Cancelar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.filaTitulo}>{c.titulo}</Text>
-                <Text style={styles.filaDato}>
-                  {c.fecha}
-                  {c.hora ? ` · ${c.hora}` : ''}
-                </Text>
-                {c.lugar ? <Text style={styles.filaDato}>📍 {c.lugar}</Text> : null}
-              </View>
-              <TouchableOpacity onPress={() => iniciarEdicion(c)} style={styles.botonIcono}>
-                <Ionicons name="pencil-outline" size={18} color={COLORS.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleEliminar(c)} style={styles.botonIcono}>
-                <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      ))}
+      {proximas.length > 0 && <Text style={styles.grupo}>Próximas</Text>}
+      {proximas.map(renderFila)}
+
+      {pasadas.length > 0 && <Text style={styles.grupo}>Ya pasaron (no se ven en Inicio)</Text>}
+      {pasadas.map(renderFila)}
     </View>
   );
 }
@@ -291,6 +331,20 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     backgroundColor: COLORS.background,
   },
+  filaFecha: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginBottom: SPACING.xs },
+  botonFecha: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: SPACING.sm + 4,
+    marginRight: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  botonFechaTexto: { fontSize: FONT.texto - 1, fontWeight: '600', color: COLORS.text, marginLeft: SPACING.xs + 2 },
   botonPublicar: {
     flexDirection: 'row',
     backgroundColor: COLORS.accent,
@@ -301,6 +355,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   botonPublicarTexto: { color: '#FFFFFF', fontSize: FONT.texto - 1, fontWeight: '700', marginLeft: SPACING.sm },
+  grupo: { fontSize: FONT.subtitulo, fontWeight: '800', color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.xs },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -310,6 +365,7 @@ const styles = StyleSheet.create({
   },
   filaTitulo: { fontSize: FONT.texto - 1, fontWeight: '600', color: COLORS.text },
   filaDato: { fontSize: FONT.pequeno - 1, color: COLORS.textMuted },
+  aviso: { fontSize: FONT.pequeno - 2, color: COLORS.accent, fontStyle: 'italic', marginTop: 2 },
   botonIcono: { padding: SPACING.xs + 2 },
   inputEdicion: {
     borderWidth: 1.5,
