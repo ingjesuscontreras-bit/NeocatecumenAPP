@@ -37,9 +37,7 @@ function CampoFecha({ valor, onCambio }) {
             value: valor,
             mode: 'date',
             minimumDate: new Date(),
-            onChange: (evento, seleccion) => {
-              if (evento.type === 'set' && seleccion) onCambio(seleccion);
-            },
+            onValueChange: (evento, seleccion) => onCambio(seleccion),
           })
         }
       >
@@ -56,7 +54,7 @@ function CampoFecha({ valor, onCambio }) {
         display="compact"
         locale="es-ES"
         minimumDate={new Date()}
-        onChange={(evento, seleccion) => seleccion && onCambio(seleccion)}
+        onValueChange={(evento, seleccion) => seleccion && onCambio(seleccion)}
       />
     </View>
   );

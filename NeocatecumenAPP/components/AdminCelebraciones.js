@@ -41,9 +41,7 @@ function CampoFechaHora({ valor, onCambio }) {
         value: valor,
         mode: modo,
         is24Hour: false,
-        onChange: (evento, seleccion) => {
-          if (evento.type === 'set' && seleccion) onCambio(combinar(valor, seleccion, modo));
-        },
+        onValueChange: (evento, seleccion) => onCambio(combinar(valor, seleccion, modo)),
       });
     };
     return (
@@ -67,14 +65,14 @@ function CampoFechaHora({ valor, onCambio }) {
         mode="date"
         display="compact"
         locale="es-ES"
-        onChange={(evento, seleccion) => seleccion && onCambio(combinar(valor, seleccion, 'date'))}
+        onValueChange={(evento, seleccion) => seleccion && onCambio(combinar(valor, seleccion, 'date'))}
       />
       <DateTimePicker
         value={valor}
         mode="time"
         display="compact"
         locale="es-ES"
-        onChange={(evento, seleccion) => seleccion && onCambio(combinar(valor, seleccion, 'time'))}
+        onValueChange={(evento, seleccion) => seleccion && onCambio(combinar(valor, seleccion, 'time'))}
       />
     </View>
   );
