@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,9 @@ import {
   Linking,
   Alert,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
+import AsistenteScreen from './AsistenteScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs } from 'firebase/firestore';
@@ -48,6 +50,17 @@ export default function LiturgiaScreen() {
   const [hoy, setHoy] = useState(new Date());
   const [recursos, setRecursos] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [mostrarAsistente, setMostrarAsistente] = useState(false);
+
+  // Botón físico "atrás" de Android: cierra el asistente y vuelve a Liturgia
+  useEffect(() => {
+    if (!mostrarAsistente) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setMostrarAsistente(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [mostrarAsistente]);
 
   const cargar = useCallback(async () => {
     if (!comunidadId) return;
@@ -71,6 +84,10 @@ export default function LiturgiaScreen() {
   );
 
   const info = informacionLiturgica(hoy);
+
+  if (mostrarAsistente) {
+    return <AsistenteScreen onVolver={() => setMostrarAsistente(false)} />;
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -101,6 +118,24 @@ export default function LiturgiaScreen() {
       <Fila icono="heart-outline" texto="Oraciones y devociones" onPress={() => abrirEnlace(URL_ORACIONES)} />
 
       <Text style={styles.seccion}>Recursos de tu comunidad</Text>
+      <TouchableOpacity
+        style={styles.cardAsistente}
+        onPress={() => setMostrarAsistente(true)}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Abrir el Asistente Católico"
+      >
+        <View style={styles.asistenteIcono}>
+          <Ionicons name="chatbubbles" size={28} color={COLORS.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.asistenteTitulo}>Asistente Católico</Text>
+          <Text style={styles.asistenteTexto}>
+            Consulta qué dicen la Biblia, el Catecismo, los papas y los santos sobre un tema.
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
+      </TouchableOpacity>
       {cargando && <ActivityIndicator color={COLORS.primary} />}
       {!cargando && recursos.length === 0 && (
         <View style={styles.cardVacia}>
@@ -156,6 +191,28 @@ const styles = StyleSheet.create({
     ...SOMBRA_TARJETA,
   },
   filaTexto: { flex: 1, fontSize: FONT.texto, fontWeight: '600', color: COLORS.text, marginLeft: SPACING.sm + 4 },
+  cardAsistente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SOMBRA_TARJETA,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.3,
+  },
+  asistenteIcono: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+  },
+  asistenteTitulo: { fontSize: FONT.subtitulo, fontWeight: '800', color: '#FFFFFF', marginBottom: 2 },
+  asistenteTexto: { fontSize: FONT.texto - 2, color: '#F1EEFC', lineHeight: 21 },
   cardVacia: {
     alignItems: 'center',
     backgroundColor: COLORS.card,

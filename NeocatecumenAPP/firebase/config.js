@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { browserLocalPersistence } from 'firebase/auth';
 /**
  * firebase/config.js
  * Conexión con Firebase. La sesión se guarda en el teléfono (AsyncStorage).
@@ -26,7 +28,7 @@ let auth;
 
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
-  auth = initializeAuth(app, { persistence: getReactNativePersistence(almacenamiento) });
+  auth = initializeAuth(app, { persistence: Platform.OS === 'web' ? browserLocalPersistence : getReactNativePersistence(almacenamiento) });
 } else {
   // Al recargar la app en desarrollo, reutiliza lo ya iniciado
   app = getApp();
