@@ -2,10 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { numeroParaMarcar, numeroParaWhatsApp } from '../utils/telefono';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function ContactarModal({ persona, onCerrar }) {
+  const insets = useSafeAreaInsets();
   const visible = !!persona;
   const telefono = persona?.telefono || '';
   const marcable = numeroParaMarcar(telefono);
@@ -25,7 +27,7 @@ export default function ContactarModal({ persona, onCerrar }) {
       <View style={styles.fondo}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onCerrar} />
 
-        <View style={styles.hoja}>
+        <View style={[styles.hoja, { paddingBottom: SPACING.xl + insets.bottom }]}>
           <Text style={styles.nombre}>{persona?.nombre}</Text>
           <Text style={styles.telefono}>📞 {telefono}</Text>
 

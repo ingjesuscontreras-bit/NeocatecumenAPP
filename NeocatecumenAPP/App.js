@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, BackHandler, StyleSheet } from 'react-native';
+import { ActivityIndicator, BackHandler, Platform, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
@@ -18,6 +18,9 @@ import LiturgiaScreen from './screens/LiturgiaScreen';
 import AdminScreen from './screens/AdminScreen';
 
 const Tab = createBottomTabNavigator();
+
+// Cuántos puntos sube la barra inferior en Android. Súbelo si aún te queda baja.
+const ELEVAR_BARRA_ANDROID = 10;
 
 const ICONOS = {
   Inicio: { activo: 'home', inactivo: 'home-outline' },
@@ -45,6 +48,9 @@ const LiturgiaConEspacio = conEspacioSeguro(LiturgiaScreen);
 const AdminConEspacio = conEspacioSeguro(AdminScreen);
 
 function AppTabs({ esAdmin }) {
+  const insets = useSafeAreaInsets();
+  const margenInferior = Math.max(insets.bottom, 8) + (Platform.OS === 'android' ? ELEVAR_BARRA_ANDROID : 0);
+
   return (
     <Tab.Navigator
       initialRouteName="Inicio"
@@ -52,7 +58,8 @@ function AppTabs({ esAdmin }) {
         headerShown: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#9089B8',
-        tabBarStyle: { height: 78, paddingBottom: 12, paddingTop: 8 },
+        tabBarStyle: { height: 66 + margenInferior, paddingBottom: margenInferior, paddingTop: 8 },
+        tabBarHideOnKeyboard: true,
         tabBarLabelStyle: { fontSize: 13, fontWeight: '700' },
         tabBarIcon: ({ focused, color, size }) => {
           const nombreIcono = focused ? ICONOS[route.name].activo : ICONOS[route.name].inactivo;
