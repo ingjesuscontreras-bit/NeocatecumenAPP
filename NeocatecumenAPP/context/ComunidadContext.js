@@ -33,6 +33,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { generarCodigoAcceso } from '../utils/generarCodigo';
+import { registrarPush } from '../utils/registrarPush';
 
 const ComunidadContext = createContext(null);
 const CLAVE_STORAGE = 'neocatecumenapp:comunidadId';
@@ -70,6 +71,7 @@ export function ComunidadProvider({ children }) {
             const snapComunidad = await getDoc(doc(db, 'comunidades', idGuardado));
             if (snapComunidad.exists()) {
               setComunidadId(idGuardado);
+            registrarPush(idGuardado, user.uid);
               setComunidad(snapComunidad.data());
               setModo('miembro');
             }
@@ -160,6 +162,7 @@ export function ComunidadProvider({ children }) {
       const snapComunidad = await getDoc(doc(db, 'comunidades', idComunidad));
       await AsyncStorage.setItem(CLAVE_STORAGE, idComunidad);
       setComunidadId(idComunidad);
+    registrarPush(idComunidad, credenciales.user.uid);
       setComunidad(snapComunidad.data());
       setModo('miembro');
     } catch (error) {

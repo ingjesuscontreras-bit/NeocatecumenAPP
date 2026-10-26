@@ -1,3 +1,4 @@
+import { enviarNotificacionComunidad } from '../utils/enviarNotificaciones';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -137,7 +138,8 @@ export default function AdminCelebraciones() {
       setLugar('');
       setFechaHora(fechaPorDefecto());
       await cargar();
-      Alert.alert('¡Publicado!', 'La celebración ya está visible para tu comunidad.');
+      enviarNotificacionComunidad(comunidadId, 'Nueva celebración', 'Hay una nueva celebración en tu comunidad. Ábrela para ver los detalles.');
+Alert.alert('¡Publicado!', 'La celebración ya está visible para tu comunidad.');
     } catch (error) {
       Alert.alert('Error al publicar', error.message);
     } finally {

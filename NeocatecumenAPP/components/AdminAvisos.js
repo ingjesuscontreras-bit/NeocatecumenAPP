@@ -1,3 +1,4 @@
+import { enviarNotificacionComunidad } from '../utils/enviarNotificaciones';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -186,6 +187,7 @@ export default function AdminAvisos() {
       });
       setNuevo(valorNuevo());
       await cargar();
+      enviarNotificacionComunidad(comunidadId, 'Nuevo aviso', datos.titulo);
       Alert.alert('¡Publicado!', 'El aviso ya está visible para tu comunidad.');
     } catch (error) {
       Alert.alert('Error al publicar', error.message);
