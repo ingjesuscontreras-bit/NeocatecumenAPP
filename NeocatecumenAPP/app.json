@@ -2,7 +2,7 @@
   "expo": {
     "name": "NeocatecumenAPP",
     "slug": "neocatecumenapp",
-       "version": "1.1.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "neocatecumenapp",
@@ -54,7 +54,11 @@
           "color": "#4C3AAE",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
