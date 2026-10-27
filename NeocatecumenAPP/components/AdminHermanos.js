@@ -8,10 +8,12 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import {
   collection,
   getDocs,
@@ -23,19 +25,60 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
-import { parsearHermanosTxt } from '../utils/parsearHermanosTxt';
+import { leerBytesComoTexto, base64ABytes } from '../utils/leerTexto';
+import { parsearListaHermanos, crearPlantillaCsv } from '../utils/parsearHermanosCsv';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
+const ES_WEB = Platform.OS === 'web';
+
 function generarId() {
   return `h_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// En la web, Alert de React Native no muestra nada: ahí usamos las ventanas del navegador.
+function avisar(titulo, mensaje = '') {
+  if (ES_WEB) {
+    window.alert(mensaje ? `${titulo}\n\n${mensaje}` : titulo);
+    return;
+  }
+  Alert.alert(titulo, mensaje);
+}
+
+function confirmar(titulo, mensaje, textoSi = 'Sí', destructivo = false) {
+  if (ES_WEB) return Promise.resolve(window.confirm(`${titulo}\n\n${mensaje}`));
+  return new Promise((resolve) => {
+    Alert.alert(
+      titulo,
+      mensaje,
+      [
+        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+        { text: textoSi, style: destructivo ? 'destructive' : 'default', onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) }
+    );
+  });
+}
+
+async function leerArchivo(archivo) {
+  let bytes;
+  if (ES_WEB) {
+    const buffer = archivo.file
+      ? await archivo.file.arrayBuffer()
+      : await (await fetch(archivo.uri)).arrayBuffer();
+    bytes = new Uint8Array(buffer);
+  } else {
+    const b64 = await FileSystem.readAsStringAsync(archivo.uri, { encoding: 'base64' });
+    bytes = base64ABytes(b64);
+  }
+  return leerBytesComoTexto(bytes);
 }
 
 export default function AdminHermanos() {
   const { comunidadId } = useComunidad();
   const [hermanos, setHermanos] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [subiendoTxt, setSubiendoTxt] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
 
   const [editandoId, setEditandoId] = useState(null);
   const [editNombre, setEditNombre] = useState('');
@@ -55,7 +98,7 @@ export default function AdminHermanos() {
       const snap = await getDocs(collection(db, 'comunidades', comunidadId, 'hermanos'));
       setHermanos(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (error) {
-      Alert.alert('Error al cargar hermanos', error.message);
+      avisar('Error al cargar hermanos', error.message);
     } finally {
       setCargando(false);
     }
@@ -65,39 +108,88 @@ export default function AdminHermanos() {
     cargar();
   }, [cargar]);
 
-  // ---------- Subir TXT (reemplaza toda la lista) ----------
-  const handleSubirTxt = async () => {
+  // ---------- Descargar plantilla ----------
+  const handleDescargarPlantilla = async () => {
+    const csv = crearPlantillaCsv();
+    try {
+      if (ES_WEB) {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = 'plantilla-hermanos.csv';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        URL.revokeObjectURL(url);
+        return;
+      }
+      const uri = `${FileSystem.cacheDirectory}plantilla-hermanos.csv`;
+      await FileSystem.writeAsStringAsync(uri, csv);
+      if (!(await Sharing.isAvailableAsync())) {
+        avisar('No se puede compartir', 'Este teléfono no permite compartir archivos.');
+        return;
+      }
+      await Sharing.shareAsync(uri, {
+        mimeType: 'text/csv',
+        dialogTitle: 'Guardar o enviar la plantilla',
+        UTI: 'public.comma-separated-values-text',
+      });
+    } catch (error) {
+      avisar('No se pudo crear la plantilla', error.message);
+    }
+  };
+
+  // ---------- Subir lista llena (reemplaza toda la lista) ----------
+  const handleSubirLista = async () => {
     const resultado = await DocumentPicker.getDocumentAsync({
-      type: ['text/plain', 'text/*'],
+      type: '*/*',
       copyToCacheDirectory: true,
     });
     if (resultado.canceled) return;
 
-    setSubiendoTxt(true);
+    const archivo = resultado.assets[0];
+    const nombreArchivo = archivo.name || '';
+    if (/\.xlsx?$/i.test(nombreArchivo)) {
+      avisar(
+        'Ese archivo es de Excel',
+        'Primero guárdalo como CSV: en Excel, Archivo → Guardar como → "CSV UTF-8". En Google Sheets: Archivo → Descargar → CSV. Luego súbelo.'
+      );
+      return;
+    }
+
+    setSubiendo(true);
     try {
-      const archivo = resultado.assets[0];
-      const contenido = await FileSystem.readAsStringAsync(archivo.uri);
-      const { hermanos: nuevos, errores } = parsearHermanosTxt(contenido);
+      const contenido = await leerArchivo(archivo);
+      const { hermanos: nuevos, errores, matrimonios, solos } = parsearListaHermanos(contenido, nombreArchivo);
 
       if (nuevos.length === 0) {
-        Alert.alert('Archivo vacío o con formato incorrecto', errores.join('\n') || 'No se encontró ningún hermano.');
+        avisar(
+          'No se encontró ningún hermano',
+          errores.slice(0, 5).join('\n') || 'Revisa que los nombres empiecen en la segunda fila de la plantilla.'
+        );
         return;
       }
 
-      Alert.alert(
+      const detalleErrores = errores.length
+        ? `\n\n⚠️ Revisa esto:\n${errores.slice(0, 5).join('\n')}${
+            errores.length > 5 ? `\n…y ${errores.length - 5} más.` : ''
+          }`
+        : '';
+
+      const ok = await confirmar(
         'Confirmar carga',
-        `Se encontraron ${nuevos.length} hermanos en el archivo.\n` +
-          (errores.length > 0 ? `⚠️ ${errores.length} línea(s) con error, serán ignoradas.\n` : '') +
-          `\nEsto REEMPLAZARÁ la lista actual de hermanos. ¿Continuar?`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Sí, reemplazar', style: 'destructive', onPress: () => reemplazarLista(nuevos) },
-        ]
+        `Se cargarán ${nuevos.length} personas: ${matrimonios} matrimonio(s) y ${solos} persona(s) sola(s).` +
+          detalleErrores +
+          '\n\nEsto REEMPLAZARÁ la lista actual de hermanos. ¿Continuar?',
+        'Sí, reemplazar',
+        true
       );
+      if (ok) await reemplazarLista(nuevos);
     } catch (error) {
-      Alert.alert('Error al leer el archivo', error.message);
+      avisar('Error al leer el archivo', error.message);
     } finally {
-      setSubiendoTxt(false);
+      setSubiendo(false);
     }
   };
 
@@ -105,9 +197,11 @@ export default function AdminHermanos() {
     try {
       const refHermanos = collection(db, 'comunidades', comunidadId, 'hermanos');
       const snapActual = await getDocs(refHermanos);
-      const batchBorrado = writeBatch(db);
-      snapActual.docs.forEach((d) => batchBorrado.delete(d.ref));
-      await batchBorrado.commit();
+      for (let i = 0; i < snapActual.docs.length; i += 450) {
+        const batchBorrado = writeBatch(db);
+        snapActual.docs.slice(i, i + 450).forEach((d) => batchBorrado.delete(d.ref));
+        await batchBorrado.commit();
+      }
 
       for (let i = 0; i < nuevos.length; i += 450) {
         const batch = writeBatch(db);
@@ -120,21 +214,21 @@ export default function AdminHermanos() {
         });
         await batch.commit();
       }
-      Alert.alert('¡Listo!', 'La lista de hermanos se actualizó correctamente.');
+      avisar('¡Listo!', 'La lista de hermanos se actualizó correctamente.');
       cargar();
     } catch (error) {
-      Alert.alert('Error al guardar', error.message);
+      avisar('Error al guardar', error.message);
     }
   };
 
   // ---------- Agregar uno manualmente ----------
   const handleGuardarNuevo = async () => {
     if (!nuevoNombre.trim()) {
-      Alert.alert('Falta el nombre', 'Escribe al menos el nombre del hermano.');
+      avisar('Falta el nombre', 'Escribe al menos el nombre del hermano.');
       return;
     }
     if (esMatrimonio && !nombrePareja.trim()) {
-      Alert.alert('Falta la pareja', 'Escribe el nombre del cónyuge, o desactiva "Es un matrimonio".');
+      avisar('Falta la pareja', 'Escribe el nombre del cónyuge, o desactiva "Es un matrimonio".');
       return;
     }
 
@@ -156,7 +250,7 @@ export default function AdminHermanos() {
       setMostrarAgregar(false);
       cargar();
     } catch (error) {
-      Alert.alert('Error al guardar', error.message);
+      avisar('Error al guardar', error.message);
     } finally {
       setGuardando(false);
     }
@@ -177,7 +271,7 @@ export default function AdminHermanos() {
 
   const guardarEdicion = async (id) => {
     if (!editNombre.trim()) {
-      Alert.alert('Falta el nombre', 'El nombre no puede quedar vacío.');
+      avisar('Falta el nombre', 'El nombre no puede quedar vacío.');
       return;
     }
     try {
@@ -190,7 +284,7 @@ export default function AdminHermanos() {
       );
       cancelarEdicion();
     } catch (error) {
-      Alert.alert('Error al guardar', error.message);
+      avisar('Error al guardar', error.message);
     }
   };
 
@@ -207,16 +301,25 @@ export default function AdminHermanos() {
       }
       cargar();
     } catch (error) {
-      Alert.alert('Error al eliminar', error.message);
+      avisar('Error al eliminar', error.message);
     }
   };
 
-  const handleEliminar = (h) => {
+  const handleEliminar = async (h) => {
     if (h.parejaId) {
       const pareja = hermanos.find((x) => x.id === h.parejaId);
+      const nombrePar = pareja?.nombre || 'su cónyuge';
+      if (ES_WEB) {
+        if (!window.confirm(`¿Eliminar a ${h.nombre}?`)) return;
+        const ambos = window.confirm(
+          `${h.nombre} está vinculado(a) con ${nombrePar}.\n\n¿Eliminar también a ${nombrePar}?\n\nAceptar = a ambos\nCancelar = solo a ${h.nombre}`
+        );
+        eliminar(h.id, h.parejaId, ambos);
+        return;
+      }
       Alert.alert(
         'Esta persona tiene pareja',
-        `${h.nombre} está vinculado(a) con ${pareja?.nombre || 'su cónyuge'}. ¿Qué deseas hacer?`,
+        `${h.nombre} está vinculado(a) con ${nombrePar}. ¿Qué deseas hacer?`,
         [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Solo a esta persona', onPress: () => eliminar(h.id, h.parejaId, false) },
@@ -224,10 +327,8 @@ export default function AdminHermanos() {
         ]
       );
     } else {
-      Alert.alert('Eliminar hermano', `¿Seguro que quieres eliminar a ${h.nombre}?`, [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: () => eliminar(h.id, null, false) },
-      ]);
+      const ok = await confirmar('Eliminar hermano', `¿Seguro que quieres eliminar a ${h.nombre}?`, 'Eliminar', true);
+      if (ok) eliminar(h.id, null, false);
     }
   };
 
@@ -235,18 +336,27 @@ export default function AdminHermanos() {
     <View style={styles.card}>
       <Text style={styles.cardTitulo}>👨‍👩‍👧‍👦 Lista de hermanos ({hermanos.length})</Text>
 
-      <TouchableOpacity style={styles.botonPrincipal} onPress={handleSubirTxt} disabled={subiendoTxt}>
-        {subiendoTxt ? (
+      <TouchableOpacity
+        style={[styles.botonSecundario, { marginTop: 0, marginBottom: SPACING.sm }]}
+        onPress={handleDescargarPlantilla}
+      >
+        <Ionicons name="download-outline" size={20} color={COLORS.primary} />
+        <Text style={styles.botonSecundarioTexto}>Descargar plantilla (Excel / CSV)</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.botonPrincipal} onPress={handleSubirLista} disabled={subiendo}>
+        {subiendo ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
           <>
-            <Ionicons name="document-text-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.botonPrincipalTexto}>Subir archivo .txt (reemplaza todo)</Text>
+            <Ionicons name="cloud-upload-outline" size={20} color="#FFFFFF" />
+            <Text style={styles.botonPrincipalTexto}>Subir lista llena (reemplaza todo)</Text>
           </>
         )}
       </TouchableOpacity>
       <Text style={styles.ayuda}>
-        Formato: Nombre & Nombre (si es matrimonio) | Teléfono — una persona por línea.
+        Llena la plantilla en Excel o Google Sheets: una fila por familia. Si es matrimonio, llena las 4 columnas;
+        si va solo(a), deja vacías las dos últimas. Guárdala como CSV y súbela. También acepta el .txt de antes.
       </Text>
 
       <TouchableOpacity style={styles.botonSecundario} onPress={() => setMostrarAgregar(!mostrarAgregar)}>
