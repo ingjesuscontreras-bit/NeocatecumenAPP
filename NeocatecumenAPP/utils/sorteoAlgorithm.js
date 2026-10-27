@@ -41,6 +41,14 @@ export function construirUnidades(hermanos) {
   return unidades;
 }
 
+/**
+ * Forma los grupos. Un matrimonio es una sola unidad: nunca se separa,
+ * ni como cabeza ni dentro del grupo.
+ * Cada grupo trae:
+ *   cabezaNombres: ['Juan'] o ['Jesús', 'Ana'] si el cabeza es un matrimonio
+ *   unidades: [['María'], ['Luis', 'Antonia'], ...] el resto del grupo
+ *   miembros: todas las personas del grupo (incluido el cabeza)
+ */
 export function generarSorteo(hermanos, numGrupos, esManual, idsCabezasManual = []) {
   if (!numGrupos || numGrupos < 1) {
     throw new Error('La cantidad de grupos debe ser al menos 1.');
@@ -58,16 +66,14 @@ export function generarSorteo(hermanos, numGrupos, esManual, idsCabezasManual = 
   let unidadesRestantes = [];
 
   if (esManual) {
-    if (idsCabezasManual.length !== numGrupos) {
+    const idsCabezaSet = new Set(idsCabezasManual);
+    unidadesCabeza = unidades.filter((u) => u.miembros.some((m) => idsCabezaSet.has(m.id)));
+
+    if (unidadesCabeza.length !== numGrupos) {
       throw new Error(
-        `Debes seleccionar exactamente ${numGrupos} cabeza(s) de grupo (llevas ${idsCabezasManual.length}).`
+        `Debes seleccionar exactamente ${numGrupos} cabeza(s) de grupo (llevas ${unidadesCabeza.length}).`
       );
     }
-
-    const idsCabezaSet = new Set(idsCabezasManual);
-    unidadesCabeza = unidades.filter((u) =>
-      u.miembros.some((m) => idsCabezaSet.has(m.id))
-    );
 
     const idsUnidadesCabeza = new Set(unidadesCabeza.map((u) => u.id));
     unidadesRestantes = unidades.filter((u) => !idsUnidadesCabeza.has(u.id));
@@ -77,17 +83,30 @@ export function generarSorteo(hermanos, numGrupos, esManual, idsCabezasManual = 
     unidadesRestantes = barajadas.slice(numGrupos);
   }
 
-  const restantesBarajadas = shuffle(unidadesRestantes);
-
   const grupos = unidadesCabeza.map((unidadCabeza, index) => ({
     numero: index + 1,
     cabeza: unidadCabeza.etiqueta,
+    cabezaNombres: unidadCabeza.miembros.map((m) => m.nombre),
+    unidades: [],
     miembros: [...unidadCabeza.miembros],
   }));
 
-  restantesBarajadas.forEach((unidad, index) => {
-    const grupoDestino = grupos[index % grupos.length];
-    grupoDestino.miembros.push(...unidad.miembros);
+  // Cada familia va al grupo con menos personas (si hay empate, a uno al azar)
+  shuffle(unidadesRestantes).forEach((unidad) => {
+    let minimo = Infinity;
+    let candidatos = [];
+    grupos.forEach((g) => {
+      const n = g.miembros.length;
+      if (n < minimo) {
+        minimo = n;
+        candidatos = [g];
+      } else if (n === minimo) {
+        candidatos.push(g);
+      }
+    });
+    const destino = candidatos[Math.floor(Math.random() * candidatos.length)];
+    destino.unidades.push(unidad.miembros.map((m) => m.nombre));
+    destino.miembros.push(...unidad.miembros);
   });
 
   return grupos;

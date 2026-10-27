@@ -9,24 +9,37 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
 import { construirUnidades, generarSorteo } from '../utils/sorteoAlgorithm';
+import { exportarPdfTombola, unirNombres } from '../utils/pdfTombola';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
+
+// En la web, Alert de React Native no muestra nada: ahí usamos la ventana del navegador.
+function avisar(titulo, mensaje = '') {
+  if (Platform.OS === 'web') {
+    window.alert(mensaje ? `${titulo}\n\n${mensaje}` : titulo);
+    return;
+  }
+  Alert.alert(titulo, mensaje);
+}
 
 export default function TombolaScreen() {
   const { comunidadId } = useComunidad();
   const [hermanos, setHermanos] = useState([]);
   const [cargandoHermanos, setCargandoHermanos] = useState(true);
 
+  const [nombreSorteo, setNombreSorteo] = useState('');
   const [numGrupos, setNumGrupos] = useState('3');
   const [esManual, setEsManual] = useState(false);
   const [cabezasSeleccionadas, setCabezasSeleccionadas] = useState([]);
   const [grupos, setGrupos] = useState([]);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
 
   const cargarHermanos = useCallback(async () => {
     if (!comunidadId) return;
@@ -47,6 +60,7 @@ export default function TombolaScreen() {
 
   const unidadesDisponibles = useMemo(() => construirUnidades(hermanos), [hermanos]);
   const numGruposInt = parseInt(numGrupos, 10) || 0;
+  const tituloFinal = nombreSorteo.trim() || 'Grupos';
 
   const toggleCabezaUnidad = (unidad) => {
     const idRepresentativo = unidad.miembros[0].id;
@@ -57,7 +71,7 @@ export default function TombolaScreen() {
       setCabezasSeleccionadas((prev) => prev.filter((id) => !idsDeLaUnidad.includes(id)));
     } else {
       if (cabezasSeleccionadas.length >= numGruposInt) {
-        Alert.alert(
+        avisar(
           'Límite alcanzado',
           `Ya elegiste ${numGruposInt} cabeza(s) de grupo. Deselecciona alguna antes de agregar otra.`
         );
@@ -72,15 +86,26 @@ export default function TombolaScreen() {
 
   const handleGenerarSorteo = () => {
     if (hermanos.length === 0) {
-      Alert.alert('Sin hermanos', 'Tu responsable todavía no ha subido la lista de hermanos.');
+      avisar('Sin hermanos', 'Todavía no se ha subido la lista de hermanos.');
       return;
     }
     try {
       const resultado = generarSorteo(hermanos, numGruposInt, esManual, cabezasSeleccionadas);
       setGrupos(resultado);
     } catch (error) {
-      Alert.alert('No se pudo generar el sorteo', error.message);
+      avisar('No se pudo generar el sorteo', error.message);
       setGrupos([]);
+    }
+  };
+
+  const handleDescargarPdf = async () => {
+    setGenerandoPdf(true);
+    try {
+      await exportarPdfTombola(tituloFinal, grupos);
+    } catch (error) {
+      avisar('No se pudo crear el PDF', error.message);
+    } finally {
+      setGenerandoPdf(false);
     }
   };
 
@@ -100,11 +125,21 @@ export default function TombolaScreen() {
       {hermanos.length === 0 && (
         <View style={styles.cardAviso}>
           <Ionicons name="alert-circle-outline" size={22} color={COLORS.danger} />
-          <Text style={styles.avisoTexto}>
-            Tu responsable todavía no ha subido la lista de hermanos de la comunidad.
-          </Text>
+          <Text style={styles.avisoTexto}>Todavía no se ha subido la lista de hermanos de la comunidad.</Text>
         </View>
       )}
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Nombre del sorteo</Text>
+        <TextInput
+          style={styles.inputTexto}
+          value={nombreSorteo}
+          onChangeText={setNombreSorteo}
+          placeholder="Ej: Equipos para Escrutacio"
+          placeholderTextColor={COLORS.textMuted}
+        />
+        <Text style={[styles.textoAyuda, { marginTop: SPACING.xs }]}>Será el título del PDF.</Text>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>Cantidad de grupos a formar</Text>
@@ -161,7 +196,7 @@ export default function TombolaScreen() {
                   size={26}
                   color={seleccionada ? COLORS.primary : COLORS.textMuted}
                 />
-                <Text style={styles.textoPersona}>{unidad.etiqueta}</Text>
+                <Text style={styles.textoPersona}>{unirNombres(unidad.miembros.map((m) => m.nombre))}</Text>
                 {unidad.tipo === 'matrimonio' && (
                   <View style={styles.badgeMatrimonio}>
                     <Text style={styles.badgeMatrimonioTexto}>Matrimonio</Text>
@@ -180,21 +215,32 @@ export default function TombolaScreen() {
 
       {grupos.length > 0 && (
         <View style={styles.resultados}>
-          <Text style={styles.tituloResultados}>Equipos formados</Text>
+          <Text style={styles.tituloResultados}>{tituloFinal}</Text>
+
           {grupos.map((grupo) => (
             <View key={grupo.numero} style={styles.cardGrupo}>
-              <View style={styles.cardGrupoHeader}>
-                <Text style={styles.cardGrupoNumero}>Grupo {grupo.numero}</Text>
-                <Text style={styles.cardGrupoCabeza}>👑 {grupo.cabeza}</Text>
-              </View>
-              {grupo.miembros.map((persona) => (
-                <View key={persona.id} style={styles.miembroFila}>
-                  <Ionicons name="person" size={18} color={COLORS.primary} style={{ marginRight: SPACING.sm }} />
-                  <Text style={styles.miembroTexto}>{persona.nombre}</Text>
+              <Text style={styles.cardGrupoCabeza}>
+                Grupo {grupo.numero} - {unirNombres(grupo.cabezaNombres)}
+              </Text>
+              {grupo.unidades.map((nombres, i) => (
+                <View key={`${grupo.numero}-${i}`} style={styles.miembroFila}>
+                  <Text style={styles.vineta}>•</Text>
+                  <Text style={styles.miembroTexto}>{unirNombres(nombres)}</Text>
                 </View>
               ))}
             </View>
           ))}
+
+          <TouchableOpacity style={styles.botonPdf} onPress={handleDescargarPdf} disabled={generandoPdf}>
+            {generandoPdf ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="document-outline" size={22} color="#FFFFFF" />
+                <Text style={styles.botonPdfTexto}>Descargar PDF</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
       )}
     </ScrollView>
@@ -240,6 +286,16 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     backgroundColor: COLORS.background,
   },
+  inputTexto: {
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm + 2,
+    paddingVertical: SPACING.md - 2,
+    paddingHorizontal: SPACING.md,
+    fontSize: FONT.texto,
+    color: COLORS.text,
+    backgroundColor: COLORS.background,
+  },
   filaSwitch: { flexDirection: 'row', alignItems: 'center' },
   filaPersona: {
     flexDirection: 'row',
@@ -280,9 +336,23 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
     ...SOMBRA_TARJETA,
   },
-  cardGrupoHeader: { borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: SPACING.sm + 2, marginBottom: SPACING.sm + 2 },
-  cardGrupoNumero: { fontSize: FONT.subtitulo + 3, fontWeight: '800', color: COLORS.primaryDark },
-  cardGrupoCabeza: { fontSize: FONT.texto, fontWeight: '600', color: COLORS.text, marginTop: 2 },
-  miembroFila: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACING.xs + 2 },
-  miembroTexto: { fontSize: FONT.texto, color: COLORS.text },
+  cardGrupoCabeza: {
+    fontSize: FONT.subtitulo + 1,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
+    marginBottom: SPACING.sm,
+  },
+  miembroFila: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: SPACING.xs },
+  vineta: { fontSize: FONT.texto, color: COLORS.text, marginRight: SPACING.sm, lineHeight: FONT.texto + 6 },
+  miembroTexto: { fontSize: FONT.texto, color: COLORS.text, flex: 1, lineHeight: FONT.texto + 6 },
+  botonPdf: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg - 2,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.sm,
+  },
+  botonPdfTexto: { color: '#FFFFFF', fontSize: FONT.subtitulo, fontWeight: '800', marginLeft: SPACING.sm },
 });
