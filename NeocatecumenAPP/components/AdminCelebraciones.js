@@ -1,15 +1,7 @@
 import { enviarNotificacionComunidad } from '../utils/enviarNotificaciones';
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
+import Text from './TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { collection, getDocs, doc, deleteDoc, setDoc, updateDoc } from 'firebase/firestore';

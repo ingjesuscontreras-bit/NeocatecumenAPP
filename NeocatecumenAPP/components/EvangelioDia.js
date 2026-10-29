@@ -1,14 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-  StyleSheet,
-  Linking,
-  ActivityIndicator,
-} from 'react-native';
+import { View, TouchableOpacity, ScrollView, Modal, StyleSheet, Linking, ActivityIndicator } from 'react-native';
+import Text from './TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { obtenerEvangelio, claveFecha } from '../utils/evangelio';
 import { URL_LECTURAS } from '../utils/liturgia';

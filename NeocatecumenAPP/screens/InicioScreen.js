@@ -1,14 +1,7 @@
+import SelectorTamanoLetra from '../components/SelectorTamanoLetra';
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import Text from '../components/TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs } from 'firebase/firestore';
@@ -77,6 +70,7 @@ export default function InicioScreen() {
           }
         >
           <Text style={styles.saludo}>👋 ¡Bienvenido/a!</Text>
+      <SelectorTamanoLetra />
 
           <View style={styles.banner}>
             <View style={{ flex: 1 }}>

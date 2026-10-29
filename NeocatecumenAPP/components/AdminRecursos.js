@@ -1,13 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import Text from './TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';

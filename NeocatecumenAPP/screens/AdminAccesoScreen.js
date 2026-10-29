@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import Text from '../components/TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useComunidad } from '../context/ComunidadContext';
 import { COLORS } from '../theme/colors';

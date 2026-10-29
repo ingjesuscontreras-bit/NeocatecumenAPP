@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import Text from '../components/TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useComunidad } from '../context/ComunidadContext';
 import AdminHermanos from '../components/AdminHermanos';

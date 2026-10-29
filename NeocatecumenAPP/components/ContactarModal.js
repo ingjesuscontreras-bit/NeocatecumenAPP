@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Linking, Alert } from 'react-native';
+import { View, TouchableOpacity, Modal, StyleSheet, Linking, Alert } from 'react-native';
+import Text from './TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { numeroParaMarcar, numeroParaWhatsApp } from '../utils/telefono';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

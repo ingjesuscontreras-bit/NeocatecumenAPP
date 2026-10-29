@@ -2,17 +2,8 @@
 // Diseño accesible: letra grande, alto contraste, botones amplios.
 
 import React, { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Text from '../components/TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { ErrorAsistente, preguntarAlAsistente } from '../utils/asistente/gemini';
 import { SUGERENCIAS } from '../utils/asistente/instrucciones';

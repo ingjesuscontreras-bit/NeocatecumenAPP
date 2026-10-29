@@ -1,3 +1,4 @@
+import { TamanoLetraProvider } from './context/TamanoLetraContext';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, BackHandler, Platform, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -136,12 +137,14 @@ function Portero() {
 export default function App() {
   return (
     <SafeAreaProvider>
+      <TamanoLetraProvider>
       <ComunidadProvider>
         <NavigationContainer>
           <StatusBar style="dark" />
           <Portero />
         </NavigationContainer>
       </ComunidadProvider>
+    </TamanoLetraProvider>
     </SafeAreaProvider>
   );
 }

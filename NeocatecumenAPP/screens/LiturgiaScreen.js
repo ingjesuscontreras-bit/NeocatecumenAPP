@@ -1,15 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Linking,
-  Alert,
-  ActivityIndicator,
-  BackHandler,
-} from 'react-native';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert, ActivityIndicator, BackHandler } from 'react-native';
+import Text from '../components/TextoEscalable';
 import AsistenteScreen from './AsistenteScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';

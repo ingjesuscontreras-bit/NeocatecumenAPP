@@ -1,14 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-  StyleSheet,
-  Linking,
-  Alert,
-} from 'react-native';
+import { View, TouchableOpacity, ScrollView, Modal, StyleSheet, Linking, Alert } from 'react-native';
+import Text from './TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs } from 'firebase/firestore';

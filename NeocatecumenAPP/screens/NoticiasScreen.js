@@ -1,15 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Linking,
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import Text from '../components/TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { FUENTES, obtenerTitulares, formatoFecha } from '../utils/noticias';

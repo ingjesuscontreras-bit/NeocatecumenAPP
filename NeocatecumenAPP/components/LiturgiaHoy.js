@@ -1,14 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Linking,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert, ActivityIndicator } from 'react-native';
+import Text from './TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
