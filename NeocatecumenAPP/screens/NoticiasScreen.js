@@ -1,11 +1,14 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import Text from '../components/TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FUENTES, obtenerTitulares, formatoFecha } from '../utils/noticias';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
+
+const CLAVE_CERRADAS = 'neocatecumenapp:noticiasCerradas';
 
 async function abrirEnlace(url) {
   if (!/^https?:\/\//i.test(url)) {
@@ -19,11 +22,26 @@ async function abrirEnlace(url) {
   }
 }
 
-function Fuente({ fuente, titulares, cargando }) {
+function Fuente({ fuente, titulares, cargando, abierta, onAlternar }) {
   return (
     <View style={styles.card}>
-      <View style={styles.encabezado}>
-        <Text style={styles.fuenteNombre}>{fuente.nombre}</Text>
+      <View style={[styles.encabezado, !abierta && { marginBottom: 0 }]}>
+        <TouchableOpacity
+          style={styles.zonaTitulo}
+          onPress={onAlternar}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={`${abierta ? 'Ocultar' : 'Mostrar'} ${fuente.nombre}`}
+          accessibilityState={{ expanded: abierta }}
+        >
+          <Text style={styles.fuenteNombre}>{fuente.nombre}</Text>
+          <Ionicons
+            name={abierta ? 'chevron-down' : 'chevron-forward'}
+            size={22}
+            color={COLORS.primary}
+            style={{ marginLeft: SPACING.xs }}
+          />
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.botonSitio}
           onPress={() => abrirEnlace(fuente.sitio)}
@@ -34,31 +52,35 @@ function Fuente({ fuente, titulares, cargando }) {
         </TouchableOpacity>
       </View>
 
-      {cargando && titulares.length === 0 && fuente.feed && <ActivityIndicator color={COLORS.primary} />}
+      {abierta && (
+        <>
+          {cargando && titulares.length === 0 && fuente.feed && <ActivityIndicator color={COLORS.primary} />}
 
-      {titulares.map((n, indice) => (
-        <TouchableOpacity
-          key={`${n.enlace}-${indice}`}
-          style={styles.noticia}
-          onPress={() => abrirEnlace(n.enlace)}
-          activeOpacity={0.7}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={styles.noticiaTitulo} numberOfLines={3}>
-              {n.titulo}
+          {titulares.map((n, indice) => (
+            <TouchableOpacity
+              key={`${n.enlace}-${indice}`}
+              style={styles.noticia}
+              onPress={() => abrirEnlace(n.enlace)}
+              activeOpacity={0.7}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.noticiaTitulo} numberOfLines={3}>
+                  {n.titulo}
+                </Text>
+                {formatoFecha(n.fecha) ? <Text style={styles.noticiaFecha}>{formatoFecha(n.fecha)}</Text> : null}
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          ))}
+
+          {!cargando && titulares.length === 0 && (
+            <Text style={styles.sinTitulares}>
+              {fuente.feed
+                ? 'No pudimos cargar los titulares ahora. Usa "Ir al sitio" para leer las noticias.'
+                : 'Toca "Ir al sitio" para leer las noticias de esta fuente.'}
             </Text>
-            {formatoFecha(n.fecha) ? <Text style={styles.noticiaFecha}>{formatoFecha(n.fecha)}</Text> : null}
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-        </TouchableOpacity>
-      ))}
-
-      {!cargando && titulares.length === 0 && (
-        <Text style={styles.sinTitulares}>
-          {fuente.feed
-            ? 'No pudimos cargar los titulares ahora. Usa "Ir al sitio" para leer las noticias.'
-            : 'Toca "Ir al sitio" para leer las noticias de esta fuente.'}
-        </Text>
+          )}
+        </>
       )}
     </View>
   );
@@ -68,6 +90,26 @@ export default function NoticiasScreen() {
   const [titulares, setTitulares] = useState({});
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
+  const [cerradas, setCerradas] = useState([]);
+
+  // Recupera qué fuentes cerró esta persona la última vez
+  useEffect(() => {
+    AsyncStorage.getItem(CLAVE_CERRADAS)
+      .then((valor) => {
+        if (!valor) return;
+        const lista = JSON.parse(valor);
+        if (Array.isArray(lista)) setCerradas(lista);
+      })
+      .catch(() => {});
+  }, []);
+
+  const alternar = (id) => {
+    setCerradas((prev) => {
+      const nueva = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      AsyncStorage.setItem(CLAVE_CERRADAS, JSON.stringify(nueva)).catch(() => {});
+      return nueva;
+    });
+  };
 
   const cargar = useCallback(async (forzar = false) => {
     const resultados = await Promise.all(FUENTES.map((f) => obtenerTitulares(f, forzar)));
@@ -89,6 +131,17 @@ export default function NoticiasScreen() {
   const delCamino = FUENTES.filter((f) => f.categoria === 'camino');
   const deLaIglesia = FUENTES.filter((f) => f.categoria === 'iglesia');
 
+  const pintar = (f) => (
+    <Fuente
+      key={f.id}
+      fuente={f}
+      titulares={titulares[f.id] || []}
+      cargando={cargando}
+      abierta={!cerradas.includes(f.id)}
+      onAlternar={() => alternar(f.id)}
+    />
+  );
+
   return (
     <ScrollView
       style={styles.container}
@@ -105,17 +158,15 @@ export default function NoticiasScreen() {
       }
     >
       <Text style={styles.titulo}>📰 Noticias</Text>
-      <Text style={styles.subtitulo}>Toca una noticia para leerla completa en su página.</Text>
+      <Text style={styles.subtitulo}>
+        Toca una noticia para leerla completa. Toca el nombre de una fuente para ocultarla o mostrarla.
+      </Text>
 
       <Text style={styles.seccion}>Del Camino</Text>
-      {delCamino.map((f) => (
-        <Fuente key={f.id} fuente={f} titulares={titulares[f.id] || []} cargando={cargando} />
-      ))}
+      {delCamino.map(pintar)}
 
       <Text style={styles.seccion}>De la Iglesia</Text>
-      {deLaIglesia.map((f) => (
-        <Fuente key={f.id} fuente={f} titulares={titulares[f.id] || []} cargando={cargando} />
-      ))}
+      {deLaIglesia.map(pintar)}
     </ScrollView>
   );
 }
@@ -142,7 +193,8 @@ const styles = StyleSheet.create({
     ...SOMBRA_TARJETA,
   },
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.xs },
-  fuenteNombre: { flex: 1, fontSize: FONT.subtitulo + 1, fontWeight: '800', color: COLORS.text },
+  zonaTitulo: { flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 44 },
+  fuenteNombre: { flexShrink: 1, fontSize: FONT.subtitulo + 1, fontWeight: '800', color: COLORS.text },
   botonSitio: {
     flexDirection: 'row',
     alignItems: 'center',
