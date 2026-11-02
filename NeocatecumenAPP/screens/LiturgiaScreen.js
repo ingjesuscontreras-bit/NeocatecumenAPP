@@ -14,6 +14,38 @@ import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 const URL_MISAL = 'http://www.ibreviary.com/m2/messale.php?b=1&lang=es';
 const URL_ORACIONES = 'http://www.ibreviary.com/m2/preghiere.php?b=1&lang=es';
 
+// ---------- Semana: fechas y enlaces ----------
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+const dosDigitos = (n) => String(n).padStart(2, '0');
+const fechaISO = (d) => `${d.getFullYear()}-${dosDigitos(d.getMonth() + 1)}-${dosDigitos(d.getDate())}`;
+const urlLecturasDe = (d) => `https://www.ewtn.com/es/catolicismo/lecturas/${fechaISO(d)}`;
+
+// Lunes de la semana de "fecha", movido "desplazamiento" semanas
+function inicioDeSemana(fecha, desplazamiento) {
+  const d = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+  const diasDesdeLunes = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - diasDesdeLunes + desplazamiento * 7);
+  return d;
+}
+
+function diasDeSemana(lunes) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    return d;
+  });
+}
+
+function textoRango(dias) {
+  const a = dias[0];
+  const b = dias[6];
+  return a.getMonth() === b.getMonth()
+    ? `${a.getDate()} – ${b.getDate()} ${MESES[b.getMonth()]}`
+    : `${a.getDate()} ${MESES[a.getMonth()]} – ${b.getDate()} ${MESES[b.getMonth()]}`;
+}
+
 async function abrirEnlace(url) {
   if (!/^https?:\/\//i.test(url)) {
     Alert.alert('Enlace no válido', 'Solo se pueden abrir enlaces web (http o https).');
@@ -33,6 +65,71 @@ function Fila({ icono, texto, onPress, color = COLORS.primary }) {
       <Text style={styles.filaTexto}>{texto}</Text>
       <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
     </TouchableOpacity>
+  );
+}
+
+function MisasSemana({ hoy }) {
+  const [desplazamiento, setDesplazamiento] = useState(0);
+  const dias = diasDeSemana(inicioDeSemana(hoy, desplazamiento));
+  const hoyISO = fechaISO(hoy);
+
+  return (
+    <View style={styles.cardSemana}>
+      <View style={styles.semanaCabecera}>
+        <TouchableOpacity
+          style={styles.flecha}
+          onPress={() => setDesplazamiento(desplazamiento - 1)}
+          accessibilityRole="button"
+          accessibilityLabel="Semana anterior"
+        >
+          <Ionicons name="chevron-back" size={26} color={COLORS.primary} />
+        </TouchableOpacity>
+        <View style={styles.semanaCentro}>
+          <Text style={styles.semanaRango}>{textoRango(dias)}</Text>
+          {desplazamiento !== 0 && (
+            <TouchableOpacity onPress={() => setDesplazamiento(0)} accessibilityRole="button">
+              <Text style={styles.volverSemana}>Volver a esta semana</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.flecha}
+          onPress={() => setDesplazamiento(desplazamiento + 1)}
+          accessibilityRole="button"
+          accessibilityLabel="Semana siguiente"
+        >
+          <Ionicons name="chevron-forward" size={26} color={COLORS.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {dias.map((d) => {
+        const esHoy = fechaISO(d) === hoyISO;
+        return (
+          <TouchableOpacity
+            key={fechaISO(d)}
+            style={[styles.dia, esHoy && styles.diaHoy]}
+            onPress={() => abrirEnlace(urlLecturasDe(d))}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Lecturas del ${DIAS[d.getDay()]} ${d.getDate()}`}
+          >
+            <Text style={[styles.diaTexto, esHoy && styles.diaTextoHoy]}>
+              {DIAS[d.getDay()]} {d.getDate()} {MESES[d.getMonth()]}
+            </Text>
+            {esHoy && (
+              <View style={styles.etiquetaHoy}>
+                <Text style={styles.etiquetaHoyTexto}>Hoy</Text>
+              </View>
+            )}
+            <Ionicons name="open-outline" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        );
+      })}
+
+      <Text style={styles.notaGuardar}>
+        Para guardar un día: ábrelo y usa Compartir → Imprimir → Guardar como PDF.
+      </Text>
+    </View>
   );
 }
 
@@ -100,6 +197,9 @@ export default function LiturgiaScreen() {
       <Fila icono="reader-outline" texto="Lecturas de la Misa" onPress={() => abrirEnlace(URL_LECTURAS)} color={COLORS.accent} />
       <Fila icono="library-outline" texto="Misal" onPress={() => abrirEnlace(URL_MISAL)} color={COLORS.accent} />
 
+      <Text style={styles.subseccion}>Misas de la semana</Text>
+      <MisasSemana hoy={hoy} />
+
       <Text style={styles.seccion}>Liturgia de las Horas</Text>
       {HORAS.map((h) => (
         <Fila key={h.clave} icono={h.icono} texto={h.nombre} onPress={() => abrirEnlace(urlHora(h.clave))} />
@@ -141,7 +241,8 @@ export default function LiturgiaScreen() {
       ))}
 
       <Text style={styles.credito}>
-        Los textos de la Misa, las horas y las oraciones se abren en iBreviary (Pro Terra Sancta).
+        Los textos de la Misa, las horas y las oraciones se abren en iBreviary (Pro Terra Sancta). Las lecturas de la
+        semana se abren en EWTN.
       </Text>
     </ScrollView>
   );
@@ -169,6 +270,13 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
   },
+  subseccion: {
+    fontSize: FONT.subtitulo,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -182,6 +290,47 @@ const styles = StyleSheet.create({
     ...SOMBRA_TARJETA,
   },
   filaTexto: { flex: 1, fontSize: FONT.texto, fontWeight: '600', color: COLORS.text, marginLeft: SPACING.sm + 4 },
+  cardSemana: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.sm + 4,
+    ...SOMBRA_TARJETA,
+  },
+  semanaCabecera: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  flecha: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  semanaCentro: { flex: 1, alignItems: 'center' },
+  semanaRango: { fontSize: FONT.subtitulo, fontWeight: '800', color: COLORS.text },
+  volverSemana: { fontSize: FONT.pequeno, fontWeight: '700', color: COLORS.primary, marginTop: 2, paddingVertical: 4 },
+  dia: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    paddingHorizontal: SPACING.sm + 4,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  diaHoy: { backgroundColor: '#EFEBFC', borderRadius: RADIUS.sm },
+  diaTexto: { flex: 1, fontSize: FONT.texto, color: COLORS.text },
+  diaTextoHoy: { fontWeight: '800', color: COLORS.primary },
+  etiquetaHoy: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    marginRight: SPACING.sm,
+  },
+  etiquetaHoyTexto: { fontSize: FONT.pequeno - 2, fontWeight: '700', color: '#FFFFFF' },
+  notaGuardar: { fontSize: FONT.pequeno - 1, color: COLORS.textMuted, fontStyle: 'italic', marginTop: SPACING.sm },
   cardAsistente: {
     flexDirection: 'row',
     alignItems: 'center',
