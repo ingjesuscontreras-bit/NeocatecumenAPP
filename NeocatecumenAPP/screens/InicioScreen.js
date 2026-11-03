@@ -1,6 +1,6 @@
 import SelectorTamanoLetra from '../components/SelectorTamanoLetra';
 import React, { useCallback, useState } from 'react';
-import { View, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import Text from '../components/TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,11 +10,13 @@ import { useComunidad } from '../context/ComunidadContext';
 import LiturgiaHoy from '../components/LiturgiaHoy';
 import AvisosComunidad from '../components/AvisosComunidad';
 import { ordenarProximas } from '../utils/eventos';
+import { usePantallaAncha } from '../utils/pantallaAncha';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function InicioScreen() {
   const { salir, comunidad, comunidadId, modo } = useComunidad();
+  const ancha = usePantallaAncha();
   const [celebraciones, setCelebraciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
@@ -41,16 +43,90 @@ export default function InicioScreen() {
   );
 
   const handleCambiarModo = () => {
-    Alert.alert(
-      'Cambiar de modo',
-      `Ahora estás como ${modo === 'admin' ? 'Responsable' : 'Hermano'}. ¿Quieres salir y volver a la pantalla de inicio?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: salir },
-      ]
-    );
+    const mensaje = `Ahora estás como ${modo === 'admin' ? 'Responsable' : 'Hermano'}. ¿Quieres salir y volver a la pantalla de inicio?`;
+    // En la web, Alert de React Native no muestra nada: usamos la ventana del navegador
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Cambiar de modo\n\n${mensaje}`)) salir();
+      return;
+    }
+    Alert.alert('Cambiar de modo', mensaje, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Salir', style: 'destructive', onPress: salir },
+    ]);
   };
 
+  const banner = (
+    <View style={styles.banner}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.bannerEtiqueta}>TU COMUNIDAD</Text>
+        <Text style={styles.bannerNombre} numberOfLines={2}>
+          {comunidad?.nombre || 'Tu comunidad'}
+        </Text>
+      </View>
+      <TouchableOpacity style={styles.botonModo} onPress={handleCambiarModo} accessibilityLabel="Cambiar de modo">
+        <Ionicons name="swap-horizontal" size={22} color="#FFFFFF" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const avisosYEncuentros = (
+    <>
+      <AvisosComunidad refresco={refresco} />
+
+      <Text style={styles.tituloSeccion}>Próximos encuentros</Text>
+
+      {cargando && <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.md }} />}
+
+      {!cargando && celebraciones.length === 0 && (
+        <View style={styles.cardVacia}>
+          <Ionicons name="calendar-outline" size={28} color={COLORS.textMuted} />
+          <Text style={styles.vaciaTexto}>No hay encuentros próximos. Tu responsable publicará los siguientes.</Text>
+        </View>
+      )}
+
+      {celebraciones.map((c) => (
+        <View key={c.id} style={styles.cardEvento}>
+          <View style={styles.cardEventoHeader}>
+            <Ionicons name="calendar" size={22} color={COLORS.primary} />
+            <Text style={styles.cardEventoTitulo}>{c.titulo}</Text>
+          </View>
+          <Text style={styles.cardEventoDetalle}>
+            📅 {c.fecha}
+            {c.hora ? `  ·  🕗 ${c.hora}` : ''}
+          </Text>
+          {c.lugar ? <Text style={styles.cardEventoDetalle}>📍 {c.lugar}</Text> : null}
+        </View>
+      ))}
+    </>
+  );
+
+  // ========== DISEÑO DE COMPUTADORA (solo web, pantalla ancha) ==========
+  if (ancha) {
+    return (
+      <View style={styles.pantalla}>
+        <View style={styles.contenedorAncho}>
+          <View style={styles.cabeceraAncha}>
+            <Text style={[styles.saludo, styles.saludoAncho]}>👋 ¡Bienvenido/a!</Text>
+            <View style={styles.selectorAncho}>
+              <SelectorTamanoLetra />
+            </View>
+          </View>
+
+          <View style={styles.columnas}>
+            <ScrollView style={styles.columnaIzquierda} contentContainerStyle={styles.columnaIzquierdaContenido}>
+              {banner}
+              {avisosYEncuentros}
+            </ScrollView>
+            <View style={styles.columnaDerecha}>
+              <LiturgiaHoy />
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ========== DISEÑO DE TELÉFONO ==========
   return (
     <View style={styles.pantalla}>
       {/* ========== MITAD SUPERIOR ========== */}
@@ -70,52 +146,9 @@ export default function InicioScreen() {
           }
         >
           <Text style={styles.saludo}>👋 ¡Bienvenido/a!</Text>
-      <SelectorTamanoLetra />
-
-          <View style={styles.banner}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.bannerEtiqueta}>TU COMUNIDAD</Text>
-              <Text style={styles.bannerNombre} numberOfLines={2}>
-                {comunidad?.nombre || 'Tu comunidad'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.botonModo}
-              onPress={handleCambiarModo}
-              accessibilityLabel="Cambiar de modo"
-            >
-              <Ionicons name="swap-horizontal" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-
-          <AvisosComunidad refresco={refresco} />
-
-          <Text style={styles.tituloSeccion}>Próximos encuentros</Text>
-
-          {cargando && <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.md }} />}
-
-          {!cargando && celebraciones.length === 0 && (
-            <View style={styles.cardVacia}>
-              <Ionicons name="calendar-outline" size={28} color={COLORS.textMuted} />
-              <Text style={styles.vaciaTexto}>
-                No hay encuentros próximos. Tu responsable publicará los siguientes.
-              </Text>
-            </View>
-          )}
-
-          {celebraciones.map((c) => (
-            <View key={c.id} style={styles.cardEvento}>
-              <View style={styles.cardEventoHeader}>
-                <Ionicons name="calendar" size={22} color={COLORS.primary} />
-                <Text style={styles.cardEventoTitulo}>{c.titulo}</Text>
-              </View>
-              <Text style={styles.cardEventoDetalle}>
-                📅 {c.fecha}
-                {c.hora ? `  ·  🕗 ${c.hora}` : ''}
-              </Text>
-              {c.lugar ? <Text style={styles.cardEventoDetalle}>📍 {c.lugar}</Text> : null}
-            </View>
-          ))}
+          <SelectorTamanoLetra />
+          {banner}
+          {avisosYEncuentros}
         </ScrollView>
       </View>
 
@@ -187,4 +220,30 @@ const styles = StyleSheet.create({
   cardEventoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
   cardEventoTitulo: { fontSize: FONT.subtitulo, fontWeight: '700', color: COLORS.text, marginLeft: SPACING.sm, flex: 1 },
   cardEventoDetalle: { fontSize: FONT.texto - 1, color: COLORS.textMuted, marginTop: 2 },
+
+  // ----- Diseño de computadora -----
+  contenedorAncho: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 28,
+  },
+  cabeceraAncha: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
+  saludoAncho: { flex: 1, fontSize: FONT.titulo + 2, marginBottom: 0 },
+  selectorAncho: { width: 340 },
+  columnas: { flex: 1, flexDirection: 'row', gap: 28 },
+  columnaIzquierda: { flex: 1.15 },
+  columnaIzquierdaContenido: { paddingBottom: SPACING.lg, paddingRight: 4 },
+  columnaDerecha: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+    marginBottom: SPACING.lg,
+    ...SOMBRA_TARJETA,
+  },
 });

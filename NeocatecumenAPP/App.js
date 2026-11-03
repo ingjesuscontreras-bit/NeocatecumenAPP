@@ -17,6 +17,8 @@ import ComunidadScreen from './screens/ComunidadScreen';
 import NoticiasScreen from './screens/NoticiasScreen';
 import LiturgiaScreen from './screens/LiturgiaScreen';
 import AdminScreen from './screens/AdminScreen';
+import MenuLateral from './components/MenuLateral';
+import { usePantallaAncha } from './utils/pantallaAncha';
 
 const Tab = createBottomTabNavigator();
 
@@ -51,15 +53,19 @@ const AdminConEspacio = conEspacioSeguro(AdminScreen);
 function AppTabs({ esAdmin }) {
   const insets = useSafeAreaInsets();
   const margenInferior = Math.max(insets.bottom, 8) + (Platform.OS === 'android' ? ELEVAR_BARRA_ANDROID : 0);
+  // En la web con pantalla ancha: menú lateral a la izquierda en vez de la barra de abajo
+  const ancha = usePantallaAncha();
 
   return (
     <Tab.Navigator
       initialRouteName="Inicio"
+      tabBar={ancha ? (props) => <MenuLateral {...props} /> : undefined}
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarPosition: ancha ? 'left' : 'bottom',
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#9089B8',
-        tabBarStyle: { height: 66 + margenInferior, paddingBottom: margenInferior, paddingTop: 8 },
+        tabBarStyle: ancha ? undefined : { height: 66 + margenInferior, paddingBottom: margenInferior, paddingTop: 8 },
         tabBarHideOnKeyboard: true,
         tabBarLabelStyle: { fontSize: 13, fontWeight: '700' },
         tabBarIcon: ({ focused, color, size }) => {

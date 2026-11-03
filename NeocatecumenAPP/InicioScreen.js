@@ -1,0 +1,249 @@
+import SelectorTamanoLetra from '../components/SelectorTamanoLetra';
+import React, { useCallback, useState } from 'react';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import Text from '../components/TextoEscalable';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { useComunidad } from '../context/ComunidadContext';
+import LiturgiaHoy from '../components/LiturgiaHoy';
+import AvisosComunidad from '../components/AvisosComunidad';
+import { ordenarProximas } from '../utils/eventos';
+import { usePantallaAncha } from '../utils/pantallaAncha';
+import { COLORS } from '../theme/colors';
+import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
+
+export default function InicioScreen() {
+  const { salir, comunidad, comunidadId, modo } = useComunidad();
+  const ancha = usePantallaAncha();
+  const [celebraciones, setCelebraciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [refrescando, setRefrescando] = useState(false);
+  const [refresco, setRefresco] = useState(0); // le avisa a los avisos que recarguen
+
+  const cargar = useCallback(async () => {
+    if (!comunidadId) return;
+    try {
+      const snap = await getDocs(collection(db, 'comunidades', comunidadId, 'celebraciones'));
+      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setCelebraciones(ordenarProximas(lista));
+    } catch (error) {
+      console.log('Error cargando celebraciones:', error);
+    } finally {
+      setCargando(false);
+      setRefrescando(false);
+    }
+  }, [comunidadId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargar();
+    }, [cargar])
+  );
+
+  const handleCambiarModo = () => {
+    const mensaje = `Ahora estás como ${modo === 'admin' ? 'Responsable' : 'Hermano'}. ¿Quieres salir y volver a la pantalla de inicio?`;
+    // En la web, Alert de React Native no muestra nada: usamos la ventana del navegador
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Cambiar de modo\n\n${mensaje}`)) salir();
+      return;
+    }
+    Alert.alert('Cambiar de modo', mensaje, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Salir', style: 'destructive', onPress: salir },
+    ]);
+  };
+
+  const banner = (
+    <View style={styles.banner}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.bannerEtiqueta}>TU COMUNIDAD</Text>
+        <Text style={styles.bannerNombre} numberOfLines={2}>
+          {comunidad?.nombre || 'Tu comunidad'}
+        </Text>
+      </View>
+      <TouchableOpacity style={styles.botonModo} onPress={handleCambiarModo} accessibilityLabel="Cambiar de modo">
+        <Ionicons name="swap-horizontal" size={22} color="#FFFFFF" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const avisosYEncuentros = (
+    <>
+      <AvisosComunidad refresco={refresco} />
+
+      <Text style={styles.tituloSeccion}>Próximos encuentros</Text>
+
+      {cargando && <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.md }} />}
+
+      {!cargando && celebraciones.length === 0 && (
+        <View style={styles.cardVacia}>
+          <Ionicons name="calendar-outline" size={28} color={COLORS.textMuted} />
+          <Text style={styles.vaciaTexto}>No hay encuentros próximos. Tu responsable publicará los siguientes.</Text>
+        </View>
+      )}
+
+      {celebraciones.map((c) => (
+        <View key={c.id} style={styles.cardEvento}>
+          <View style={styles.cardEventoHeader}>
+            <Ionicons name="calendar" size={22} color={COLORS.primary} />
+            <Text style={styles.cardEventoTitulo}>{c.titulo}</Text>
+          </View>
+          <Text style={styles.cardEventoDetalle}>
+            📅 {c.fecha}
+            {c.hora ? `  ·  🕗 ${c.hora}` : ''}
+          </Text>
+          {c.lugar ? <Text style={styles.cardEventoDetalle}>📍 {c.lugar}</Text> : null}
+        </View>
+      ))}
+    </>
+  );
+
+  // ========== DISEÑO DE COMPUTADORA (solo web, pantalla ancha) ==========
+  if (ancha) {
+    return (
+      <View style={styles.pantalla}>
+        <View style={styles.contenedorAncho}>
+          <View style={styles.cabeceraAncha}>
+            <Text style={[styles.saludo, styles.saludoAncho]}>👋 ¡Bienvenido/a!</Text>
+            <View style={styles.selectorAncho}>
+              <SelectorTamanoLetra />
+            </View>
+          </View>
+
+          <View style={styles.columnas}>
+            <ScrollView style={styles.columnaIzquierda} contentContainerStyle={styles.columnaIzquierdaContenido}>
+              {banner}
+              {avisosYEncuentros}
+            </ScrollView>
+            <View style={styles.columnaDerecha}>
+              <LiturgiaHoy />
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ========== DISEÑO DE TELÉFONO ==========
+  return (
+    <View style={styles.pantalla}>
+      {/* ========== MITAD SUPERIOR ========== */}
+      <View style={styles.mitadSuperior}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refrescando}
+              onRefresh={() => {
+                setRefrescando(true);
+                setRefresco((n) => n + 1);
+                cargar();
+              }}
+              tintColor={COLORS.primary}
+            />
+          }
+        >
+          <Text style={styles.saludo}>👋 ¡Bienvenido/a!</Text>
+          <SelectorTamanoLetra />
+          {banner}
+          {avisosYEncuentros}
+        </ScrollView>
+      </View>
+
+      {/* ========== MITAD INFERIOR ========== */}
+      <View style={styles.mitadInferior}>
+        <LiturgiaHoy />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  pantalla: { flex: 1, backgroundColor: COLORS.background },
+  mitadSuperior: { flex: 1 },
+  mitadInferior: {
+    flex: 1.1,
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: RADIUS.lg + 6,
+    borderTopRightRadius: RADIUS.lg + 6,
+    borderTopWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+    ...SOMBRA_TARJETA,
+    shadowOffset: { width: 0, height: -3 },
+  },
+  scrollContent: { padding: SPACING.md, paddingBottom: SPACING.lg },
+  saludo: { fontSize: FONT.titulo - 4, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.sm },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg - 4,
+    ...SOMBRA_TARJETA,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.3,
+  },
+  bannerEtiqueta: { fontSize: FONT.pequeno - 2, fontWeight: '700', letterSpacing: 1.5, color: '#D9D3F5' },
+  bannerNombre: { fontSize: FONT.titulo, fontWeight: '800', color: '#FFFFFF', marginTop: 2 },
+  botonModo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: SPACING.sm,
+  },
+  tituloSeccion: { fontSize: FONT.subtitulo + 3, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.sm + 2 },
+  cardVacia: {
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  vaciaTexto: { fontSize: FONT.texto - 1, color: COLORS.textMuted, textAlign: 'center', marginTop: SPACING.sm },
+  cardEvento: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm + 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SOMBRA_TARJETA,
+  },
+  cardEventoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  cardEventoTitulo: { fontSize: FONT.subtitulo, fontWeight: '700', color: COLORS.text, marginLeft: SPACING.sm, flex: 1 },
+  cardEventoDetalle: { fontSize: FONT.texto - 1, color: COLORS.textMuted, marginTop: 2 },
+
+  // ----- Diseño de computadora -----
+  contenedorAncho: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 28,
+  },
+  cabeceraAncha: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
+  saludoAncho: { flex: 1, fontSize: FONT.titulo + 2, marginBottom: 0 },
+  selectorAncho: { width: 340 },
+  columnas: { flex: 1, flexDirection: 'row', gap: 28 },
+  columnaIzquierda: { flex: 1.15 },
+  columnaIzquierdaContenido: { paddingBottom: SPACING.lg, paddingRight: 4 },
+  columnaDerecha: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+    marginBottom: SPACING.lg,
+    ...SOMBRA_TARJETA,
+  },
+});
