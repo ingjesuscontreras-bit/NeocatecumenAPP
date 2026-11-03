@@ -1,64 +1,59 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import Text from '../components/TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import { useComunidad } from '../context/ComunidadContext';
 import AdminHermanos from '../components/AdminHermanos';
 import AdminCelebraciones from '../components/AdminCelebraciones';
-   import AdminAvisos from '../components/AdminAvisos';
+import AdminAvisos from '../components/AdminAvisos';
 import AdminRecursos from '../components/AdminRecursos';
 import AdminMiembros from '../components/AdminMiembros';
 import TombolaScreen from './TombolaScreen';
+import { usePantallaAncha } from '../utils/pantallaAncha';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
+
+function avisar(titulo, mensaje = '') {
+  if (Platform.OS === 'web') {
+    window.alert(mensaje ? `${titulo}\n\n${mensaje}` : titulo);
+    return;
+  }
+  Alert.alert(titulo, mensaje);
+}
 
 export default function AdminScreen() {
   const { comunidad, salir, regenerarCodigo } = useComunidad();
   const [cambiando, setCambiando] = useState(false);
   const [verTombola, setVerTombola] = useState(false);
+  const ancha = usePantallaAncha();
 
-  const handleCambiarCodigo = () => {
-    Alert.alert(
-      'Cambiar el código',
-      'Se creará un código nuevo. Los hermanos que ya están dentro siguen con acceso, pero el código anterior dejará de servir para entrar. Úsalo, por ejemplo, después de expulsar a alguien. ¿Continuar?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Cambiar',
-          onPress: async () => {
-            setCambiando(true);
-            try {
-              const nuevo = await regenerarCodigo();
-              Alert.alert('Código nuevo', `Tu nuevo código es:\n\n${nuevo}`);
-            } catch (error) {
-              Alert.alert('No se pudo cambiar el código', error.message);
-            } finally {
-              setCambiando(false);
-            }
-          },
-        },
-      ]
-    );
+  const cambiarCodigo = async () => {
+    setCambiando(true);
+    try {
+      const nuevo = await regenerarCodigo();
+      avisar('Código nuevo', `Tu nuevo código es:\n\n${nuevo}`);
+    } catch (error) {
+      avisar('No se pudo cambiar el código', error.message);
+    } finally {
+      setCambiando(false);
+    }
   };
 
-  // Vista de la Tómbola dentro del panel
-  if (verTombola) {
-    return (
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.botonVolver} onPress={() => setVerTombola(false)}>
-          <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
-          <Text style={styles.botonVolverTexto}>Volver al panel</Text>
-        </TouchableOpacity>
-        <TombolaScreen />
-      </View>
-    );
-  }
+  const handleCambiarCodigo = () => {
+    const mensaje =
+      'Se creará un código nuevo. Los hermanos que ya están dentro siguen con acceso, pero el código anterior dejará de servir para entrar. Úsalo, por ejemplo, después de expulsar a alguien. ¿Continuar?';
+    // En la web, Alert de React Native no muestra nada: usamos la ventana del navegador
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Cambiar el código\n\n${mensaje}`)) cambiarCodigo();
+      return;
+    }
+    Alert.alert('Cambiar el código', mensaje, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cambiar', onPress: cambiarCodigo },
+    ]);
+  };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.titulo}>🛠️ Panel del Responsable</Text>
-      <Text style={styles.subtitulo}>{comunidad?.nombre}</Text>
-
+  const tarjetaCodigo = (
       <View style={styles.cardCodigo}>
         <Ionicons name="key" size={24} color="#FFFFFF" />
         <View style={{ marginLeft: SPACING.sm + 4, flex: 1 }}>
@@ -78,7 +73,9 @@ export default function AdminScreen() {
           )}
         </TouchableOpacity>
       </View>
+  );
 
+  const tarjetaTombola = (
       <TouchableOpacity style={styles.cardTombola} onPress={() => setVerTombola(true)} activeOpacity={0.8}>
         <Ionicons name="gift" size={26} color={COLORS.accent} />
         <View style={{ flex: 1, marginLeft: SPACING.sm + 4 }}>
@@ -87,17 +84,62 @@ export default function AdminScreen() {
         </View>
         <Ionicons name="chevron-forward" size={22} color={COLORS.textMuted} />
       </TouchableOpacity>
+  );
 
-   <AdminAvisos />  
-      <AdminCelebraciones />
-      <AdminRecursos />
-      <AdminHermanos />
-      <AdminMiembros />
-
+  const botonSalir = (
       <TouchableOpacity style={styles.botonSalir} onPress={salir}>
         <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
         <Text style={styles.botonSalirTexto}>Cerrar sesión</Text>
       </TouchableOpacity>
+  );
+
+  // Vista de la Tómbola dentro del panel
+  if (verTombola) {
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity style={[styles.botonVolver, ancha && styles.botonVolverAncho]} onPress={() => setVerTombola(false)}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+          <Text style={styles.botonVolverTexto}>Volver al panel</Text>
+        </TouchableOpacity>
+        <View style={ancha ? styles.tombolaAncha : styles.tombolaNormal}>
+          <TombolaScreen />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, ancha && styles.contenidoAncho]}>
+      <Text style={styles.titulo}>🛠️ Panel del Responsable</Text>
+      <Text style={styles.subtitulo}>{comunidad?.nombre}</Text>
+
+      {ancha ? (
+        <View style={styles.columnas}>
+          <View style={styles.columna}>
+            {tarjetaCodigo}
+            {tarjetaTombola}
+            <AdminAvisos />
+            <AdminCelebraciones />
+          </View>
+          <View style={styles.columna}>
+            <AdminRecursos />
+            <AdminHermanos />
+            <AdminMiembros />
+            {botonSalir}
+          </View>
+        </View>
+      ) : (
+        <>
+          {tarjetaCodigo}
+          {tarjetaTombola}
+          <AdminAvisos />
+          <AdminCelebraciones />
+          <AdminRecursos />
+          <AdminHermanos />
+          <AdminMiembros />
+          {botonSalir}
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -150,6 +192,12 @@ const styles = StyleSheet.create({
   },
   cardTombolaTitulo: { fontSize: FONT.subtitulo + 1, fontWeight: '700', color: COLORS.text },
   cardTombolaTexto: { fontSize: FONT.pequeno, color: COLORS.textMuted, marginTop: 2 },
+  contenidoAncho: { width: '100%', maxWidth: 1180, alignSelf: 'center', paddingHorizontal: 32, paddingTop: 28 },
+  columnas: { flexDirection: 'row', alignItems: 'flex-start', gap: 24 },
+  columna: { flex: 1, minWidth: 0 },
+  tombolaNormal: { flex: 1 },
+  tombolaAncha: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
+  botonVolverAncho: { width: '100%', maxWidth: 900, alignSelf: 'center', paddingTop: SPACING.md },
   botonSalir: {
     flexDirection: 'row',
     backgroundColor: COLORS.danger,

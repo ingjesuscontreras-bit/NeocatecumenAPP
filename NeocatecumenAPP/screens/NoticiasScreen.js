@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FUENTES, obtenerTitulares, formatoFecha } from '../utils/noticias';
+import { usePantallaAncha } from '../utils/pantallaAncha';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
@@ -87,6 +88,7 @@ function Fuente({ fuente, titulares, cargando, abierta, onAlternar }) {
 }
 
 export default function NoticiasScreen() {
+  const ancha = usePantallaAncha();
   const [titulares, setTitulares] = useState({});
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
@@ -142,10 +144,24 @@ export default function NoticiasScreen() {
     />
   );
 
+  const seccionCamino = (
+    <>
+      <Text style={styles.seccion}>Del Camino</Text>
+      {delCamino.map(pintar)}
+    </>
+  );
+
+  const seccionIglesia = (
+    <>
+      <Text style={styles.seccion}>De la Iglesia</Text>
+      {deLaIglesia.map(pintar)}
+    </>
+  );
+
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, ancha && styles.contenidoAncho]}
       refreshControl={
         <RefreshControl
           refreshing={refrescando}
@@ -162,11 +178,17 @@ export default function NoticiasScreen() {
         Toca una noticia para leerla completa. Toca el nombre de una fuente para ocultarla o mostrarla.
       </Text>
 
-      <Text style={styles.seccion}>Del Camino</Text>
-      {delCamino.map(pintar)}
-
-      <Text style={styles.seccion}>De la Iglesia</Text>
-      {deLaIglesia.map(pintar)}
+      {ancha ? (
+        <View style={styles.columnas}>
+          <View style={styles.columna}>{seccionCamino}</View>
+          <View style={styles.columna}>{seccionIglesia}</View>
+        </View>
+      ) : (
+        <>
+          {seccionCamino}
+          {seccionIglesia}
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -174,6 +196,9 @@ export default function NoticiasScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scrollContent: { padding: SPACING.lg - 4, paddingBottom: SPACING.xl + 28 },
+  contenidoAncho: { width: '100%', maxWidth: 1100, alignSelf: 'center', paddingHorizontal: 32, paddingTop: 28 },
+  columnas: { flexDirection: 'row', alignItems: 'flex-start', gap: 24 },
+  columna: { flex: 1, minWidth: 0 },
   titulo: { fontSize: FONT.titulo, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.xs },
   subtitulo: { fontSize: FONT.pequeno + 1, color: COLORS.textMuted, marginBottom: SPACING.sm },
   seccion: {

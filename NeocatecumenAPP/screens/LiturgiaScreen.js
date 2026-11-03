@@ -8,6 +8,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
 import { informacionLiturgica, HORAS, urlHora, URL_LECTURAS } from '../utils/liturgia';
+import { usePantallaAncha } from '../utils/pantallaAncha';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
@@ -135,6 +136,7 @@ function MisasSemana({ hoy }) {
 
 export default function LiturgiaScreen() {
   const { comunidadId } = useComunidad();
+  const ancha = usePantallaAncha();
   const [hoy, setHoy] = useState(new Date());
   const [recursos, setRecursos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -174,32 +176,26 @@ export default function LiturgiaScreen() {
   const info = informacionLiturgica(hoy);
 
   if (mostrarAsistente) {
-    return <AsistenteScreen onVolver={() => setMostrarAsistente(false)} />;
+    return (
+      <View style={ancha ? styles.asistenteAncho : styles.asistenteNormal}>
+        <AsistenteScreen onVolver={() => setMostrarAsistente(false)} />
+      </View>
+    );
   }
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.titulo}>✝️ Liturgia</Text>
-
-      <View style={styles.cardFecha}>
-        <Text style={styles.fecha}>{info.fechaTexto}</Text>
-        <Text style={styles.fechaLinea}>
-          {info.titulo}
-          {info.anioFerial ? ` (${info.anioFerial})` : ''}
-        </Text>
-        <Text style={styles.fechaSuave}>
-          Tiempo: {info.tiempo}
-          {info.salterio ? `  ·  Salterio: ${info.salterio}ª semana` : ''}
-        </Text>
-      </View>
-
+  const seccionMisa = (
+    <>
       <Text style={styles.seccion}>Misa del día</Text>
       <Fila icono="reader-outline" texto="Lecturas de la Misa" onPress={() => abrirEnlace(URL_LECTURAS)} color={COLORS.accent} />
       <Fila icono="library-outline" texto="Misal" onPress={() => abrirEnlace(URL_MISAL)} color={COLORS.accent} />
 
       <Text style={styles.subseccion}>Misas de la semana</Text>
       <MisasSemana hoy={hoy} />
+    </>
+  );
 
+  const seccionHorasYMas = (
+    <>
       <Text style={styles.seccion}>Liturgia de las Horas</Text>
       {HORAS.map((h) => (
         <Fila key={h.clave} icono={h.icono} texto={h.nombre} onPress={() => abrirEnlace(urlHora(h.clave))} />
@@ -239,6 +235,36 @@ export default function LiturgiaScreen() {
       {recursos.map((r) => (
         <Fila key={r.id} icono="link-outline" texto={r.titulo} onPress={() => abrirEnlace(r.url)} color={COLORS.accent} />
       ))}
+    </>
+  );
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, ancha && styles.contenidoAncho]}>
+      <Text style={styles.titulo}>✝️ Liturgia</Text>
+
+      <View style={styles.cardFecha}>
+        <Text style={styles.fecha}>{info.fechaTexto}</Text>
+        <Text style={styles.fechaLinea}>
+          {info.titulo}
+          {info.anioFerial ? ` (${info.anioFerial})` : ''}
+        </Text>
+        <Text style={styles.fechaSuave}>
+          Tiempo: {info.tiempo}
+          {info.salterio ? `  ·  Salterio: ${info.salterio}ª semana` : ''}
+        </Text>
+      </View>
+
+      {ancha ? (
+        <View style={styles.columnas}>
+          <View style={styles.columna}>{seccionMisa}</View>
+          <View style={styles.columna}>{seccionHorasYMas}</View>
+        </View>
+      ) : (
+        <>
+          {seccionMisa}
+          {seccionHorasYMas}
+        </>
+      )}
 
       <Text style={styles.credito}>
         Los textos de la Misa, las horas y las oraciones se abren en iBreviary (Pro Terra Sancta). Las lecturas de la
@@ -251,6 +277,11 @@ export default function LiturgiaScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scrollContent: { padding: SPACING.lg - 4, paddingBottom: SPACING.xl + 28 },
+  contenidoAncho: { width: '100%', maxWidth: 1100, alignSelf: 'center', paddingHorizontal: 32, paddingTop: 28 },
+  columnas: { flexDirection: 'row', alignItems: 'flex-start', gap: 24 },
+  columna: { flex: 1, minWidth: 0 },
+  asistenteNormal: { flex: 1 },
+  asistenteAncho: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   titulo: { fontSize: FONT.titulo, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.md },
   cardFecha: {
     backgroundColor: COLORS.primary,

@@ -7,12 +7,14 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
 import { construirUnidades } from '../utils/sorteoAlgorithm';
+import { usePantallaAncha } from '../utils/pantallaAncha';
 import ContactarModal from '../components/ContactarModal';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
 export default function ComunidadScreen() {
   const { comunidadId } = useComunidad();
+  const ancha = usePantallaAncha();
   const [busqueda, setBusqueda] = useState('');
   const [hermanos, setHermanos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -55,7 +57,7 @@ export default function ComunidadScreen() {
 
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, ancha && styles.contenidoAncho]}>
         <Text style={styles.titulo}>🤝 Comunidad</Text>
         <Text style={styles.subtitulo}>
           {unidades.length} unidades familiares · {hermanos.length} hermanos
@@ -78,8 +80,9 @@ export default function ComunidadScreen() {
           </Text>
         )}
 
+        <View style={ancha ? styles.cuadricula : null}>
         {unidadesFiltradas.map((unidad) => (
-          <View key={unidad.id} style={styles.card}>
+          <View key={unidad.id} style={[styles.card, ancha && styles.cardAncha]}>
             <View style={styles.cardHeader}>
               <Ionicons
                 name={unidad.tipo === 'matrimonio' ? 'heart' : 'person'}
@@ -113,6 +116,7 @@ export default function ComunidadScreen() {
             ))}
           </View>
         ))}
+        </View>
 
         {hermanos.length > 0 && unidadesFiltradas.length === 0 && (
           <Text style={styles.sinResultados}>No se encontraron hermanos con ese nombre.</Text>
@@ -173,5 +177,8 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
   botonContactarTexto: { color: '#FFFFFF', fontSize: FONT.pequeno, fontWeight: '700', marginLeft: SPACING.xs + 2 },
+  contenidoAncho: { width: '100%', maxWidth: 1040, alignSelf: 'center', paddingHorizontal: 32, paddingTop: 28 },
+  cuadricula: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  cardAncha: { width: '49%' },
   sinResultados: { fontSize: FONT.texto, color: COLORS.textMuted, textAlign: 'center', marginTop: SPACING.xl - 2 },
 });
