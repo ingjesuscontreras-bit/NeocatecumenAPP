@@ -1,6 +1,6 @@
 import { enviarNotificacionComunidad } from '../utils/enviarNotificaciones';
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Switch, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Switch, Platform } from 'react-native';
 import Text from './TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -9,6 +9,8 @@ import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
 import { normalizarUrl, diasDesdeHoy, separarAvisos } from '../utils/avisos';
 import { textoFecha } from '../utils/eventos';
+import { avisar, confirmar } from '../utils/dialogos';
+import CampoFechaWeb from './CampoFechaWeb';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
@@ -20,6 +22,14 @@ const valorNuevo = () => ({ titulo: '', mensaje: '', enlace: '', auto: true, fec
 
 // Selector de solo fecha (Android abre una ventanita; iPhone muestra uno compacto)
 function CampoFecha({ valor, onCambio }) {
+  // Web: calendario del navegador
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ alignItems: 'flex-start' }}>
+        <CampoFechaWeb valor={valor} onCambio={onCambio} modo="date" minimo={new Date()} />
+      </View>
+    );
+  }
   if (Platform.OS === 'android') {
     return (
       <TouchableOpacity
@@ -114,18 +124,18 @@ function FormAviso({ valor, onChange, borde }) {
 // Valida y arma los datos a guardar (devuelve null si algo falta)
 function construirDatos(v) {
   if (!v.titulo.trim()) {
-    Alert.alert('Falta el título', 'Escribe un título para el aviso.');
+    avisar('Falta el título', 'Escribe un título para el aviso.');
     return null;
   }
   if (!v.mensaje.trim()) {
-    Alert.alert('Falta el mensaje', 'Escribe el mensaje del aviso.');
+    avisar('Falta el mensaje', 'Escribe el mensaje del aviso.');
     return null;
   }
   let enlace = '';
   if (v.enlace.trim()) {
     enlace = normalizarUrl(v.enlace);
     if (!enlace) {
-      Alert.alert('Enlace no válido', 'Pega un enlace completo, por ejemplo https://...');
+      avisar('Enlace no válido', 'Pega un enlace completo, por ejemplo https://...');
       return null;
     }
   }
@@ -157,7 +167,7 @@ export default function AdminAvisos() {
       const snap = await getDocs(collection(db, 'comunidades', comunidadId, 'avisos'));
       setAvisos(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (error) {
-      Alert.alert('Error al cargar avisos', error.message);
+      avisar('Error al cargar avisos', error.message);
     } finally {
       setCargando(false);
     }
@@ -179,9 +189,9 @@ export default function AdminAvisos() {
       setNuevo(valorNuevo());
       await cargar();
       enviarNotificacionComunidad(comunidadId, 'Nuevo aviso', datos.titulo);
-      Alert.alert('¡Publicado!', 'El aviso ya está visible para tu comunidad.');
+      avisar('¡Publicado!', 'El aviso ya está visible para tu comunidad.');
     } catch (error) {
-      Alert.alert('Error al publicar', error.message);
+      avisar('Error al publicar', error.message);
     } finally {
       setPublicando(false);
     }
@@ -207,28 +217,21 @@ export default function AdminAvisos() {
       setAvisos((prev) => prev.map((a) => (a.id === id ? { ...a, ...datos } : a)));
       setEditandoId(null);
     } catch (error) {
-      Alert.alert('Error al guardar', error.message);
+      avisar('Error al guardar', error.message);
     } finally {
       setGuardando(false);
     }
   };
 
-  const handleEliminar = (aviso) => {
-    Alert.alert('Eliminar aviso', `¿Seguro que quieres eliminar "${aviso.titulo}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteDoc(doc(db, 'comunidades', comunidadId, 'avisos', aviso.id));
-            setAvisos((prev) => prev.filter((a) => a.id !== aviso.id));
-          } catch (error) {
-            Alert.alert('Error', error.message);
-          }
-        },
-      },
-    ]);
+  const handleEliminar = async (aviso) => {
+    const ok = await confirmar('Eliminar aviso', `¿Seguro que quieres eliminar "${aviso.titulo}"?`, 'Eliminar', true);
+    if (!ok) return;
+    try {
+      await deleteDoc(doc(db, 'comunidades', comunidadId, 'avisos', aviso.id));
+      setAvisos((prev) => prev.filter((a) => a.id !== aviso.id));
+    } catch (error) {
+      avisar('Error', error.message);
+    }
   };
 
   const { vigentes, vencidos } = separarAvisos(avisos);

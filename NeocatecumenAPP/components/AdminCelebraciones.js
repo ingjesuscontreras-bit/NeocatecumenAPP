@@ -1,6 +1,6 @@
 import { enviarNotificacionComunidad } from '../utils/enviarNotificaciones';
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import Text from './TextoEscalable';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -8,6 +8,8 @@ import { collection, getDocs, doc, deleteDoc, setDoc, updateDoc } from 'firebase
 import { db } from '../firebase/config';
 import { useComunidad } from '../context/ComunidadContext';
 import { textoFecha, textoHora, separar, fechaPorDefecto } from '../utils/eventos';
+import { avisar, confirmar } from '../utils/dialogos';
+import CampoFechaWeb from './CampoFechaWeb';
 import { COLORS } from '../theme/colors';
 import { SPACING, RADIUS, FONT, SOMBRA_TARJETA } from '../theme/layout';
 
@@ -28,6 +30,16 @@ function combinar(base, seleccion, modo) {
 
 // Selector de fecha y hora (Android abre ventanitas; iPhone muestra selectores compactos)
 function CampoFechaHora({ valor, onCambio }) {
+  // Web: calendario y reloj del navegador
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.filaFecha}>
+        <CampoFechaWeb valor={valor} onCambio={onCambio} modo="date" />
+        <CampoFechaWeb valor={valor} onCambio={onCambio} modo="time" />
+      </View>
+    );
+  }
+
   if (Platform.OS === 'android') {
     const abrir = (modo) => {
       DateTimePickerAndroid.open({
@@ -96,7 +108,7 @@ export default function AdminCelebraciones() {
       const snap = await getDocs(collection(db, 'comunidades', comunidadId, 'celebraciones'));
       setCelebraciones(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (error) {
-      Alert.alert('Error al cargar celebraciones', error.message);
+      avisar('Error al cargar celebraciones', error.message);
     } finally {
       setCargando(false);
     }
@@ -115,7 +127,7 @@ export default function AdminCelebraciones() {
   // ---------- Publicar ----------
   const handlePublicar = async () => {
     if (!titulo.trim()) {
-      Alert.alert('Falta el título', 'Escribe el nombre de la celebración.');
+      avisar('Falta el título', 'Escribe el nombre de la celebración.');
       return;
     }
     setPublicando(true);
@@ -131,9 +143,9 @@ export default function AdminCelebraciones() {
       setFechaHora(fechaPorDefecto());
       await cargar();
       enviarNotificacionComunidad(comunidadId, 'Nueva celebración', 'Hay una nueva celebración en tu comunidad. Ábrela para ver los detalles.');
-Alert.alert('¡Publicado!', 'La celebración ya está visible para tu comunidad.');
+      avisar('¡Publicado!', 'La celebración ya está visible para tu comunidad.');
     } catch (error) {
-      Alert.alert('Error al publicar', error.message);
+      avisar('Error al publicar', error.message);
     } finally {
       setPublicando(false);
     }
@@ -149,7 +161,7 @@ Alert.alert('¡Publicado!', 'La celebración ya está visible para tu comunidad.
 
   const guardarEdicion = async (id) => {
     if (!edTitulo.trim()) {
-      Alert.alert('Falta el título', 'El título no puede quedar vacío.');
+      avisar('Falta el título', 'El título no puede quedar vacío.');
       return;
     }
     setGuardandoEdicion(true);
@@ -163,29 +175,22 @@ Alert.alert('¡Publicado!', 'La celebración ya está visible para tu comunidad.
       setCelebraciones((prev) => prev.map((c) => (c.id === id ? { ...c, ...datos } : c)));
       setEditandoId(null);
     } catch (error) {
-      Alert.alert('Error al guardar', error.message);
+      avisar('Error al guardar', error.message);
     } finally {
       setGuardandoEdicion(false);
     }
   };
 
   // ---------- Eliminar ----------
-  const handleEliminar = (celeb) => {
-    Alert.alert('Eliminar celebración', `¿Seguro que quieres eliminar "${celeb.titulo}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteDoc(doc(db, 'comunidades', comunidadId, 'celebraciones', celeb.id));
-            setCelebraciones((prev) => prev.filter((c) => c.id !== celeb.id));
-          } catch (error) {
-            Alert.alert('Error', error.message);
-          }
-        },
-      },
-    ]);
+  const handleEliminar = async (celeb) => {
+    const ok = await confirmar('Eliminar celebración', `¿Seguro que quieres eliminar "${celeb.titulo}"?`, 'Eliminar', true);
+    if (!ok) return;
+    try {
+      await deleteDoc(doc(db, 'comunidades', comunidadId, 'celebraciones', celeb.id));
+      setCelebraciones((prev) => prev.filter((c) => c.id !== celeb.id));
+    } catch (error) {
+      avisar('Error', error.message);
+    }
   };
 
   const { proximas, pasadas } = separar(celebraciones);
